@@ -1,0 +1,27 @@
+Running at startup
+------------------
+Created a script at:
+/etc/init.d/gaggia
+
+This starts automatically at boot, and stops at shutdown.
+
+Manually start/stop as follows:
+sudo /etc/init.d/gaggia start
+sudo /etc/init.d/gaggia stop
+
+Binary location
+---------------
+The binary is located here:
+/usr/local/bin/gaggia
+
+Logging
+-------
+Temperature logs are stored here:
+/var/log/gaggia
+Files are stored in CSV format.
+File names are based on date and time.
+
+Issues
+------
+* Time/date are incorrect when run from init.d (locale issue?)
+* Discontinuous jumps in time stamps (probably due to NTP adjustment)

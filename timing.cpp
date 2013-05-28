@@ -4,6 +4,14 @@
 
 //-----------------------------------------------------------------------------
 
+/// defines which clock we use for timing:
+/// CLOCK_MONOTONIC_RAW = raw hardware based time, not subject to NTP
+///   adjustments or incremental adjustments performed by adjtime. Reports 2ns
+///   resolution on Raspbian and two successive reads take about 2us.
+static const clockid_t g_timingClockId = CLOCK_MONOTONIC_RAW;
+
+//-----------------------------------------------------------------------------
+
 void delayms( unsigned ms )
 {
 	struct timespec req, rem;
@@ -34,10 +42,10 @@ void delayus ( unsigned us )
 
 double getClock()
 {
-	struct timeval now;
-	gettimeofday( &now, 0 );
+	struct timespec now;
+	clock_gettime( g_timingClockId, &now );
 
-	return (double)now.tv_sec + (double)now.tv_usec * 1.0E-6;
+	return (double)now.tv_sec + (double)now.tv_nsec * 1.0E-9;
 }
 
 //-----------------------------------------------------------------------------

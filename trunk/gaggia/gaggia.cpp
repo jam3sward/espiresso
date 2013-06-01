@@ -66,9 +66,14 @@ int runController(
 	// set 10 bit resolution
 	temperature.setResolution( 10 );
 
-	const double kP = 0.05;
-	const double kI = 0.04;
-	const double kD = 0.3;
+	// a couple of dummy temperature reads
+	double value = 0.0;
+	temperature.read( &value );
+	temperature.read( &value );
+
+	const double kP = 0.07;
+	const double kI = 0.05;
+	const double kD = 0.9;
 	const double kMin = 0.0;
 	const double kMax = 1.0;
 
@@ -114,10 +119,12 @@ int runController(
 
 		sprintf(
 			buffer,
-			"%.3lf,%.1lf,%.4lf",
+			"%.3lf,%.2lf,%.2lf",
 			elapsed, drive, position
 		);
 		out << buffer << endl;
+
+		if (interactive) printf( "%.2lf\n", position );
 
 		// sleep for remainder of time step
 		double used = getClock() - elapsed - start;
@@ -146,6 +153,16 @@ int main( int argc, char **argv )
 
 	const string command( argv[1] );
 
+	bool interactive = false;
+
+	for (int i=2; i<argc; ++i) {
+		string option( argv[i] );
+		if ( option == "-i" )
+			interactive = true;
+		else
+			cerr << "gaggia: unexpected option\n";
+	}
+
 	if ( command == "stop" ) {
 		Boiler boiler;
 		boiler.setPower( false );
@@ -154,7 +171,7 @@ int main( int argc, char **argv )
 	} else if ( command == "start" ) {
 		string fileName( makeLogFileName() );
 		cout << "gaggia: starting controller (log=" << fileName << ")\n";
-		return runController( false, filePath + fileName );
+		return runController( interactive, filePath + fileName );
 	} else {
 		cerr << "gaggia: unrecognised command (" << command << ")\n";
 		return 1;

@@ -1,6 +1,7 @@
-gaggia: gaggia.cpp pwm.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o
+gaggia: gaggia.cpp \
+	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o
 	g++ -o gaggia gaggia.cpp \
-	pwm.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o -lrt
+	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o -lrt
 
 pwm.o: pwm.h pwm.cpp
 	g++ -c pwm.cpp
@@ -22,3 +23,7 @@ boiler.o: boiler.h boiler.cpp
 
 keyboard.o: keyboard.h keyboard.cpp
 	g++ -c keyboard.cpp
+
+inputs.o: inputs.h inputs.cpp
+	g++ -c inputs.cpp
+

@@ -9,6 +9,9 @@
 // GPIO pin used for Solid State Relay
 #define SSRPIN 22
 
+// GPIO pin used for shutdown button
+#define HALTBUTTONPIN 24
+
 //-----------------------------------------------------------------------------
 
 #endif//__settings_h

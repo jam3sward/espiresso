@@ -9,6 +9,7 @@
 #include "temperature.h"
 #include "boiler.h"
 #include "keyboard.h"
+#include "inputs.h"
 
 using namespace std;
 
@@ -48,12 +49,13 @@ int runController(
 	const std::string & fileName
 ) {
 	// run at high priority
-	struct sched_param sched = {};
-	sched.sched_priority = sched_get_priority_max( SCHED_RR );
-	sched_setscheduler( 0, SCHED_RR, &sched );
+//	struct sched_param sched = {};
+//	sched.sched_priority = sched_get_priority_max( SCHED_RR );
+//	sched_setscheduler( 0, SCHED_RR, &sched );
 
 	Temperature temperature;
 	Boiler boiler;
+	Inputs inputs;
 
 	// open log file
 	ofstream out( fileName.c_str() );
@@ -96,6 +98,8 @@ int runController(
 	if ( interactive )
 		nonblock(1);
 
+	bool halt = false;
+
 	short old = 0;
 	double start = getClock();
 	double next  = start;
@@ -104,6 +108,11 @@ int runController(
 		next += timeStep;
 
 		if ( interactive && kbhit() ) break;
+
+		if ( inputs.getHaltButton() ) {
+			halt = true;
+			break;
+		}
 
 		double elapsed = getClock() - start;
 
@@ -142,6 +151,11 @@ int runController(
 
 	// turn the boiler off before we exit!
 	boiler.powerOff();
+
+	// if the halt button was pushed, halt the system
+	if ( halt ) {
+		system( "halt" );
+	}
 
   	return 0;
 }

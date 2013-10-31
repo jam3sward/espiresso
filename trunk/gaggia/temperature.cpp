@@ -6,6 +6,7 @@
 //#include <termios.h>
 //#include <assert.h>
 #include "temperature.h"
+#include <assert.h>
 #include "gpio.h"
 #include "timing.h"
 #include "settings.h"
@@ -32,7 +33,7 @@
 Temperature::Temperature() :
 	m_mask( 0xFFFF )
 {
-	gpio_initialise();
+	BCM::open();
 }
 
 //-----------------------------------------------------------------------------

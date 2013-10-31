@@ -98,7 +98,11 @@ int runController(
 
 	short old = 0;
 	double start = getClock();
+	double next  = start;
 	do {
+		// next time step
+		next += timeStep;
+
 		if ( interactive && kbhit() ) break;
 
 		double elapsed = getClock() - start;
@@ -115,7 +119,7 @@ int runController(
 
 		// turn on the boiler (pulse width modulation)
 		// note: will leave boiler on if drive is 1
-		boiler.pulsePower( drive, 1.0 );
+		boiler.setPower( drive );
 
 		sprintf(
 			buffer,
@@ -127,17 +131,17 @@ int runController(
 		if (interactive) printf( "%.2lf\n", position );
 
 		// sleep for remainder of time step
-		double used = getClock() - elapsed - start;
-		double remain = timeStep - used;
+		//double used = getClock() - elapsed - start;
+		double remain = next - getClock();;
 		if ( remain > 0.0 )
-			delayus( (int)(1.0E6 * remain) );
+			delayms( (int)(1.0E3 * remain) );
 	} while (true);
 
 	if ( interactive )
 		nonblock(0);
 
 	// turn the boiler off before we exit!
-	boiler.setPower( false );
+	boiler.powerOff();
 
   	return 0;
 }

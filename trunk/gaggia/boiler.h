@@ -3,23 +3,33 @@
 
 //-----------------------------------------------------------------------------
 
+#include "pwm.h"
+
+//-----------------------------------------------------------------------------
+
 /// Represents the boiler, which can be turned on and off
 class Boiler {
 public:
 	/// Default constructor
 	Boiler();
 
-	/// Turn on/off
-	void setPower( bool on );
+	/// Destructor
+	~Boiler();
 
-	/// Returns true if on, false otherwise
-	bool getPower() const;
+	/// Set current power level (0..1)
+	void setPower( double value );
 
-	/// Pulse the power for width*period (seconds)
-	void pulsePower( double width, double period );
+	/// Returns power level (0..1)
+	double getPower() const;
+
+	/// Returns true if boiler is on
+	bool isOn() const;
+
+	/// Turn off the boiler (same as setting power to 0)
+	void powerOff();
 
 private:
-	bool m_power;	/// Power on/off
+	PWM	 m_pwm;		/// Hardware PWM
 };
 
 //-----------------------------------------------------------------------------

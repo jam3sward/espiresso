@@ -5,57 +5,60 @@
 
 //-----------------------------------------------------------------------------
 
-Boiler::Boiler() :
-	m_power( false )
+Boiler::Boiler()
 {
-	gpio_initialise();
+	BCM::open();
 
-	// make SSR pin an output and set low initially
-    INP_GPIO(SSRPIN);
-    OUT_GPIO(SSRPIN);
-    GPIO_CLR = 1<<SSRPIN;
+	// configure PWM for 2Hz frequency with 4000 range
+	m_pwm.setDivisor( 2400 );
+	m_pwm.setRange( 4000 );
+
+	// set up with 0% duty cycle and enable
+	m_pwm.setValue( 0.0 );
+	m_pwm.enable();
 }
 
 //-----------------------------------------------------------------------------
 
-void Boiler::setPower( bool on )
+Boiler::~Boiler()
 {
-	// turn SSR on/off as required
-	if (on)
-		GPIO_SET = 1<<SSRPIN;
-	else
-    	GPIO_CLR = 1<<SSRPIN;
-
-	// store power state
-	m_power = on;
+	// shutdown PWM
+	m_pwm.disable();
 }
 
 //-----------------------------------------------------------------------------
 
-bool Boiler::getPower() const
+void Boiler::setPower( double value )
 {
-	return m_power;
-}
-
-//-----------------------------------------------------------------------------
-
-void Boiler::pulsePower( double width, double period )
-{
-	// for a very small width, do nothing
-	if ( width < 0.01 ) return;
+	// clamp width to 0% minimum
+	if ( value < 0.0 ) value = 0.0;
 
 	// clamp width to 100% maximum
-	if ( width > 1.0 ) width = 1.0;
+	if ( value > 1.0 ) value = 1.0;
 
-	// turn the power on
-	setPower( true );
+	// set pulse width
+	m_pwm.setValue( value );
+}
 
-	// keep it on for specified period
-	delayus( width * 1.0E6 * period );
+//-----------------------------------------------------------------------------
 
-	// if less than 100% then leave it on
-	if ( width < 0.99 )
-		setPower( false );
+double Boiler::getPower() const
+{
+	return m_pwm.getValue();
+}
+
+//-----------------------------------------------------------------------------
+
+bool Boiler::isOn() const
+{
+	return (m_pwm.getIntegerValue() != 0);
+}
+
+//-----------------------------------------------------------------------------
+
+void Boiler::powerOff()
+{
+	m_pwm.setIntegerValue( 0 );
 }
 
 //-----------------------------------------------------------------------------

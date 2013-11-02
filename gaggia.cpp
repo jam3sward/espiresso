@@ -183,7 +183,7 @@ int main( int argc, char **argv )
 
 	if ( command == "stop" ) {
 		Boiler boiler;
-		boiler.setPower( false );
+		boiler.powerOff();
 		cout << "gaggia: turned off boiler SSR\n";
 		return 0;
 	} else if ( command == "start" ) {

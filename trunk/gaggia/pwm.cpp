@@ -3,6 +3,7 @@
 #include "pwm.h"
 #include "gpio.h"
 #include "timing.h"
+#include "settings.h"
 
 #define PWMCLK_CNTL  *(BCM::clk+40)
 #define PWMCLK_DIV   *(BCM::clk+41)
@@ -187,8 +188,9 @@ double PWM::getValue() const
 void PWM::initialise()
 {
 	// configure GPIO18 as PWM output
-	INP_GPIO(18);
-	SET_GPIO_ALT(18, 5);
+	assert( SSRPIN == 18 );
+	INP_GPIO( SSRPIN );
+	SET_GPIO_ALT( SSRPIN, 5 );
 
 	// apply default settings
 	setDivisor( m_divisor );

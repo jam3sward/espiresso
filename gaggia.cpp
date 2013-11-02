@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <map>
 
 #include "timing.h"
 #include "pid.h"
@@ -16,6 +17,43 @@ using namespace std;
 //-----------------------------------------------------------------------------
 
 static const string filePath( "/var/log/gaggia/" );
+static const string configFile( "/etc/gaggia.conf" );
+
+//-----------------------------------------------------------------------------
+
+std::map<std::string, double> config;
+
+bool disableBoiler = false;		/// disable boiler if true (for testing)
+
+//-----------------------------------------------------------------------------
+
+/// very simplistic configuration file loader
+bool loadConfig( std::string fileName )
+{
+	// open the file
+	ifstream f( fileName.c_str() );
+	if ( !f ) return false;
+
+	do {
+		// read key
+		string key;
+		f >> ws >> key;
+		if ( !f ) break;
+
+		// read value
+		double value;
+		f >> ws >> value;
+		if ( !f ) break;
+
+		// store key/value
+		config[key] = value;
+		//cout << key << " = " << value << endl;
+	} while (true);
+
+	f.close();
+
+	return true;
+}
 
 //-----------------------------------------------------------------------------
 
@@ -48,11 +86,6 @@ int runController(
 	bool interactive,
 	const std::string & fileName
 ) {
-	// run at high priority
-//	struct sched_param sched = {};
-//	sched.sched_priority = sched_get_priority_max( SCHED_RR );
-//	sched_setscheduler( 0, SCHED_RR, &sched );
-
 	Temperature temperature;
 	Boiler boiler;
 	Inputs inputs;
@@ -60,6 +93,14 @@ int runController(
 	// open log file
 	ofstream out( fileName.c_str() );
 
+	// read configuration file
+	if ( !loadConfig( configFile ) ) {
+		out << "error: failed to load configuration from "
+			<< configFile << endl;
+		return 1;
+	}
+
+	// initialise digital thermometer
 	if ( !temperature.initialise() ) {
 		out << "error: thermometer not found\n";
 		return 1;
@@ -73,27 +114,35 @@ int runController(
 	temperature.read( &value );
 	temperature.read( &value );
 
-	const double kP = 0.07;
-	const double kI = 0.05;
-	const double kD = 0.9;
-	const double kMin = 0.0;
-	const double kMax = 1.0;
+	// read PID controller parameters from configuration
+	// these are the proportional, integral, derivate coefficients and
+	// the integrator limits
+	const double kP = config["kP"];
+	const double kI = config["kI"];
+	const double kD = config["kD"];
+	const double kMin = config["iMin"];
+	const double kMax = config["iMax"];
 
 	PIDControl pid;
 	pid.setPIDGains( kP, kI, kD );
 	pid.setIntegratorLimits( kMin, kMax );
 
-	char buffer[256];
+	// target temperature in degrees centigrade
+	double targetTemp = config["targetTemp"];
+
+	// time step in seconds
+	double timeStep = config["timeStep"];
+
+	// output parameters to log
+	char buffer[512];
 	sprintf(
 		buffer,
-		"P=%.4f,I=%.4f,D=%.4f,iMin=%.3f,iMax=%.3f",
-		kP, kI, kD, kMin, kMax
+		"P=%.4lf,I=%.4lf,D=%.4lf,iMin=%.3lf,iMax=%.3lf,"
+		"targetTemp=%.3lf,timeStep=%.3lf",
+		kP, kI, kD, kMin, kMax,
+		targetTemp, timeStep
 	);
 	out << buffer << endl;
-
-	double targetPosition = 95.0;
-
-	double timeStep = 1.0;;
 
 	if ( interactive )
 		nonblock(1);
@@ -116,10 +165,10 @@ int runController(
 
 		double elapsed = getClock() - start;
 
-		double position = 0.0;
-		while ( !temperature.read( &position ) ) {}
+		double temp = 0.0;
+		while ( !temperature.read( &temp ) ) {}
 
-		double drive = pid.update( targetPosition - position, position );
+		double drive = pid.update( targetTemp - temp, temp );
 
 		if ( drive > 1.0 )
 			drive = 1.0;
@@ -128,16 +177,17 @@ int runController(
 
 		// turn on the boiler (pulse width modulation)
 		// note: will leave boiler on if drive is 1
-		boiler.setPower( drive );
+		if ( !disableBoiler )
+			boiler.setPower( drive );
 
 		sprintf(
 			buffer,
 			"%.3lf,%.2lf,%.2lf",
-			elapsed, drive, position
+			elapsed, drive, temp
 		);
 		out << buffer << endl;
 
-		if (interactive) printf( "%.2lf\n", position );
+		if (interactive) printf( "%.2lf %.2lf\n", elapsed, temp );
 
 		// sleep for remainder of time step
 		//double used = getClock() - elapsed - start;
@@ -177,6 +227,8 @@ int main( int argc, char **argv )
 		string option( argv[i] );
 		if ( option == "-i" )
 			interactive = true;
+		else if ( option == "-d" )
+			disableBoiler = true;
 		else
 			cerr << "gaggia: unexpected option\n";
 	}

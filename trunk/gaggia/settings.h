@@ -13,6 +13,13 @@
 // GPIO pin used for shutdown button
 #define HALTBUTTONPIN 24
 
+// GPIO pin used by flow sensor
+#define FLOWPIN 21
+
+// GPIO pins used by ultrasonic ranger
+#define RANGER_TRIGGER_OUT 25
+#define RANGER_ECHO_IN 23
+
 //-----------------------------------------------------------------------------
 
 #endif//__settings_h

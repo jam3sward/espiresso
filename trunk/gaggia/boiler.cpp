@@ -23,6 +23,7 @@ Boiler::Boiler()
 Boiler::~Boiler()
 {
 	// shutdown PWM
+	m_pwm.setIntegerValue( 0 );
 	m_pwm.disable();
 }
 

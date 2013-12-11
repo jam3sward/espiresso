@@ -190,7 +190,7 @@ int runController(
 		out << buffer << endl;
 
 		if (interactive) {
-			printf( "%.2lf %.2lf %u\n", elapsed, temp, flow.getCount() );
+			printf( "%.2lf %.2lf %.2lf\n", elapsed, temp, 1000.0*flow.getLitres() );
 		}
 
 		// sleep for remainder of time step

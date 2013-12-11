@@ -9,6 +9,7 @@
 #include "pid.h"
 #include "temperature.h"
 #include "boiler.h"
+#include "flow.h"
 #include "keyboard.h"
 #include "inputs.h"
 
@@ -89,6 +90,7 @@ int runController(
 	Temperature temperature;
 	Boiler boiler;
 	Inputs inputs;
+	Flow flow;
 
 	// open log file
 	ofstream out( fileName.c_str() );
@@ -187,7 +189,9 @@ int runController(
 		);
 		out << buffer << endl;
 
-		if (interactive) printf( "%.2lf %.2lf\n", elapsed, temp );
+		if (interactive) {
+			printf( "%.2lf %.2lf %u\n", elapsed, temp, flow.getCount() );
+		}
 
 		// sleep for remainder of time step
 		//double used = getClock() - elapsed - start;

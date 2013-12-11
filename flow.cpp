@@ -3,6 +3,7 @@
 #include "flow.h"
 #include "settings.h"
 
+// Using the Digmesa FHKSC 932-9521-B flow sensor with 1.2mm diameter bore
 // With flow sensor in situ, pumping fresh water, measured:
 //  count=1033, weight=248g = 4165 counts/l
 //  count=1272, weight=316g = 4025 counts/l

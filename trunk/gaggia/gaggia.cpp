@@ -182,15 +182,19 @@ int runController(
 		if ( !disableBoiler )
 			boiler.setPower( drive );
 
+		// number of millilitres of water drawn up by the pump
+		double ml = 1000.0 * flow.getLitres();
+
+		// dump values to log file
 		sprintf(
 			buffer,
-			"%.3lf,%.2lf,%.2lf",
-			elapsed, drive, temp
+			"%.3lf,%.2lf,%.2lf,%.1lf",
+			elapsed, drive, temp, ml
 		);
 		out << buffer << endl;
 
 		if (interactive) {
-			printf( "%.2lf %.2lf %.2lf\n", elapsed, temp, 1000.0*flow.getLitres() );
+			printf( "%.2lf %.2lf %.1lf\n", elapsed, temp, ml );
 		}
 
 		// sleep for remainder of time step

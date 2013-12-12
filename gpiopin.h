@@ -42,6 +42,9 @@ public:
 	/// Poll the pin with timeout
 	bool poll( unsigned timeout );
 
+	/// Is the pin ready (is it configured successfully?) 
+	bool ready() const;
+
 protected:
 	/// Export the pin
 	bool exportPin();
@@ -56,8 +59,8 @@ protected:
 	void close();
 
 private:
-	int	m_pin;
-	int m_file;
+	int	m_pin;			///< GPIO pin number
+	int m_file;			///< Associated file descriptor
 	std::string m_path;
 };
 

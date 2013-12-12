@@ -34,6 +34,9 @@ public:
 	/// Set the number of counts per litre
 	Flow & setCountsPerLitre( unsigned counts );
 
+	/// Is the flow meter ready for use?
+	bool ready() const;
+
 private:
 	/// Worker thread
 	void worker();

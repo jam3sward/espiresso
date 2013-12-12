@@ -95,6 +95,12 @@ int runController(
 	// open log file
 	ofstream out( fileName.c_str() );
 
+	// check that flow meter is available
+	if ( !flow.ready() ) {
+		out << "error: flow meter not ready\n";
+		return 1;
+	}
+
 	// read configuration file
 	if ( !loadConfig( configFile ) ) {
 		out << "error: failed to load configuration from "

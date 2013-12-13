@@ -32,8 +32,8 @@ public:
 	typedef std::function<void(void)> NotifyFunc;
 
 	/// Receive a notification when a given number of litres have been
-	/// delivered. Note: the notification function will be called from
-	/// another thread. It should do minimal work and return promptly.
+	/// delivered. The notification function is called asynchronously
+	/// from another thread.
 	Flow & notifyAfter( double litres, NotifyFunc func );
 
 	/// Disable notifications

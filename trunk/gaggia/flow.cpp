@@ -1,4 +1,5 @@
 #include <chrono>
+#include <future>
 #include <iostream>
 #include "flow.h"
 #include "settings.h"
@@ -18,6 +19,8 @@ Flow::Flow() :
 	m_count( 0 ),
 	m_run( true ),
 	m_countsPerLitre( 4095 ),
+	m_notifyFunc( nullptr ),
+	m_notifyCount( 0 ),
 	m_thread( &Flow::worker, this )
 {
 }
@@ -46,9 +49,36 @@ void Flow::worker()
 		if ( m_flowPin.poll( 250 ) ) {
 			// received an interrupt
 
-			// increment our counter
-			std::lock_guard<std::mutex> lock( m_mutex );
-			++m_count;
+			bool notify = false;
+
+			{
+				// lock the mutex
+				std::lock_guard<std::mutex> lock( m_mutex );
+
+				// increment our counter
+				++m_count;
+
+				// should we send a notification?
+				notify = (m_notifyCount > 0) && (m_count >= m_notifyCount);
+
+				// prevent multiple notifications
+				if ( notify ) m_notifyCount = 0;
+			}
+
+			// send the notification
+			if ( notify ) {
+				try {
+					// call it asynchronously
+					std::async(
+						std::launch::async,
+						m_notifyFunc
+					);
+				} catch ( const std::system_error & e ) {
+					// couldn't start thread: call from this one
+					if ( e.code() == std::errc::resource_unavailable_try_again )
+						m_notifyFunc();
+				}
+			}
 		} else {
 			// timed out (opportunity to exit)
 		}
@@ -81,6 +111,31 @@ double Flow::getLitres() const
 	return
 		static_cast<double>( getCount() ) /
 		static_cast<double>( m_countsPerLitre );
+}
+
+//-----------------------------------------------------------------------------
+
+Flow & Flow::notifyAfter( double litres, NotifyFunc func )
+{
+	// convert litres to an integer number of counts
+	unsigned amount = static_cast<unsigned>(
+		litres * static_cast<double>(m_countsPerLitre) + 0.5
+	);
+
+	// set up the notification
+	std::lock_guard<std::mutex> lock( m_mutex );
+	m_notifyFunc  = func;
+	m_notifyCount = m_count + amount;
+}
+
+//-----------------------------------------------------------------------------
+
+Flow & Flow::notifyCancel()
+{
+	// clear the notification
+	std::lock_guard<std::mutex> lock( m_mutex );
+	m_notifyFunc  = nullptr;
+	m_notifyCount = 0;
 }
 
 //-----------------------------------------------------------------------------

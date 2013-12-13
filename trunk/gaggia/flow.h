@@ -28,6 +28,17 @@ public:
 	/// sensor in litres
 	double getLitres() const;
 
+	/// Notification function type
+	typedef std::function<void(void)> NotifyFunc;
+
+	/// Receive a notification when a given number of litres have been
+	/// delivered. Note: the notification function will be called from
+	/// another thread. It should do minimal work and return promptly.
+	Flow & notifyAfter( double litres, NotifyFunc func );
+
+	/// Disable notifications
+	Flow & notifyCancel();
+
 	/// Returns the number of counts per litre
 	unsigned getCountsPerLitre() const;
 
@@ -45,6 +56,9 @@ private:
 	GPIOPin  m_flowPin;	///< Pin used to read the flow sensor
 	unsigned m_count;	///< Current counter value
 	bool	 m_run;		///< Should thread continue to run?
+
+	NotifyFunc m_notifyFunc;	///< Notification function
+	unsigned m_notifyCount;		///< Count at which notification occurs (or 0)
 
 	/// The number of counts per litre
 	unsigned m_countsPerLitre;

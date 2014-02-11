@@ -124,7 +124,7 @@ double Ranger::measureRange()
 {
     // minimum time (in seconds) between successive calls
     // this is to prevent the ranger from being triggered too frequently
-    const double minimumInterval = 0.2;
+    const double minimumInterval = 0.25;
 
     // timeout in milliseconds when waiting for echo
     const unsigned timeout = 60;

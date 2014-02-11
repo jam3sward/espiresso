@@ -1,9 +1,9 @@
 gaggia: gaggia.cpp settings.h \
 	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o \
-	gpiopin.o ranger.o flow.o system.o
+	gpiopin.o ranger.o flow.o system.o pump.o
 	g++ -o gaggia gaggia.cpp \
 	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o \
-	gpiopin.o ranger.o flow.o system.o \
+	gpiopin.o ranger.o flow.o system.o pump.o \
 	-lrt -lpthread -std=c++0x
 
 pwm.o: pwm.h pwm.cpp settings.h
@@ -38,6 +38,9 @@ ranger.o: ranger.h ranger.cpp settings.h
 
 flow.o: flow.h flow.cpp settings.h
 	g++ -c flow.cpp -std=c++0x
+
+pump.o: pump.h pump.cpp settings.h
+	g++ -c pump.cpp
 
 system.o: system.h system.cpp
 	g++ -c system.cpp

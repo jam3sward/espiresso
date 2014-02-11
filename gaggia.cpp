@@ -243,6 +243,10 @@ int runTests()
         (temperature.initialise() ? "ready" : "not ready")
         << endl;
 
+	cout << "range: " <<
+		(ranger.initialise() ? "ready" : "not ready")
+		<< endl;
+
     // set 10 bit resolution
     temperature.setResolution( 10 );
 
@@ -271,9 +275,7 @@ int runTests()
 		);
     } while (true);
 
-    nonb
-
-lock(0);
+    nonblock(0);
 
 	return 0;
 }

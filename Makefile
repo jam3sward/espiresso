@@ -34,7 +34,7 @@ gpiopin.o: gpiopin.h gpiopin.cpp
 	g++ -c gpiopin.cpp
 
 ranger.o: ranger.h ranger.cpp settings.h
-	g++ -c ranger.cpp
+	g++ -c ranger.cpp -std=c++0x
 
 flow.o: flow.h flow.cpp settings.h
 	g++ -c flow.cpp -std=c++0x

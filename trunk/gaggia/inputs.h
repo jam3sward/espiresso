@@ -8,9 +8,6 @@ class Inputs {
 public:
 	/// Default constructor
 	Inputs();
-
-	/// Returns halt button state
-	bool getHaltButton() const;
 };
 
 //-----------------------------------------------------------------------------

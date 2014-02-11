@@ -261,14 +261,19 @@ int runTests()
         // number of millilitres of water drawn up by the pump
         double ml = 1000.0 * flow.getLitres();
 
-        // range measurement
-        double range = ranger.getRange();
+        // range measurement (convert to mm)
+        double range = 1000.0 * ranger.getRange();
 
         // print sensor values
-        printf( "%.2lf %.2lf %.1lf %.3lf\n", temp, coreTemp, ml, range );
+        printf(
+			"%.2lfC %.2lfC %.1lfml %.0lfmm\n",
+			temp, coreTemp, ml, range
+		);
     } while (true);
 
-    nonblock(0);
+    nonb
+
+lock(0);
 
 	return 0;
 }

@@ -10,8 +10,10 @@
 #include "temperature.h"
 #include "boiler.h"
 #include "flow.h"
+#include "ranger.h"
 #include "keyboard.h"
 #include "inputs.h"
+#include "system.h"
 
 using namespace std;
 
@@ -166,10 +168,10 @@ int runController(
 
 		if ( interactive && kbhit() ) break;
 
-		if ( inputs.getHaltButton() ) {
-			halt = true;
-			break;
-		}
+//		if ( inputs.getHaltButton() ) {
+//			halt = true;
+//			break;
+//		}
 
 		double elapsed = getClock() - start;
 
@@ -226,6 +228,53 @@ int runController(
 
 //-----------------------------------------------------------------------------
 
+int runTests()
+{
+    Temperature temperature;
+    Flow flow;
+    Ranger ranger;
+    System system;
+
+    cout << "flow: " <<
+        (flow.ready() ? "ready" : "not ready")
+        << endl;
+
+    cout << "temp: " <<
+        (temperature.initialise() ? "ready" : "not ready")
+        << endl;
+
+    // set 10 bit resolution
+    temperature.setResolution( 10 );
+
+    nonblock(1);
+
+    do {
+        if ( kbhit() ) break;
+
+        // read temperature sensor
+        double temp = 0.0;
+        while ( !temperature.read( &temp ) ) {}
+
+        // read core temperature
+        double coreTemp = system.getCoreTemperature();
+
+        // number of millilitres of water drawn up by the pump
+        double ml = 1000.0 * flow.getLitres();
+
+        // range measurement
+        double range = ranger.getRange();
+
+        // print sensor values
+        printf( "%.2lf %.2lf %.1lf %.3lf\n", temp, coreTemp, ml, range );
+    } while (true);
+
+    nonblock(0);
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+
 int main( int argc, char **argv )
 {
 	if ( argc < 2 ) {
@@ -256,6 +305,9 @@ int main( int argc, char **argv )
 		string fileName( makeLogFileName() );
 		cout << "gaggia: starting controller (log=" << fileName << ")\n";
 		return runController( interactive, filePath + fileName );
+	} else if ( command == "test" ) {
+		cout << "gaggia: test mode\n";
+		return runTests();
 	} else {
 		cerr << "gaggia: unrecognised command (" << command << ")\n";
 		return 1;

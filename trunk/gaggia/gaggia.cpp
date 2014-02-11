@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sched.h>
+#include <ctype.h>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -10,6 +11,7 @@
 #include "temperature.h"
 #include "boiler.h"
 #include "flow.h"
+#include "pump.h"
 #include "ranger.h"
 #include "keyboard.h"
 #include "inputs.h"
@@ -233,6 +235,7 @@ int runTests()
     Temperature temperature;
     Flow flow;
     Ranger ranger;
+	Pump pump;
     System system;
 
     cout << "flow: " <<
@@ -253,7 +256,23 @@ int runTests()
     nonblock(1);
 
     do {
-        if ( kbhit() ) break;
+        if ( kbhit() ) {
+			// get key
+			char key = getchar();
+
+			bool stop = false;
+			switch ( tolower(key) ) {
+			case 'p':
+				pump.setState( !pump.getState() );
+				cout << "pump: " << (pump.getState() ? "on" : "off") << endl;
+				break;
+
+			default:
+				stop = true;
+			}
+
+			if (stop) break;
+		}
 
         // read temperature sensor
         double temp = 0.0;

@@ -10,6 +10,9 @@
 // NOTE: this is now using hardware PWM
 #define SSRPIN 18
 
+// GPIO pin used for the Pump
+#define PUMP_PIN 15
+
 // GPIO pin used by flow sensor
 #define FLOWPIN 27
 

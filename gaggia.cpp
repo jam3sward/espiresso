@@ -236,6 +236,7 @@ int runTests()
     Flow flow;
     Ranger ranger;
 	Pump pump;
+	Inputs inputs;
     System system;
 
     cout << "flow: " <<
@@ -287,10 +288,14 @@ int runTests()
         // range measurement (convert to mm)
         double range = 1000.0 * ranger.getRange();
 
+		// get button states
+		int b1 = inputs.getButton(1) ? 1:0;
+		int b2 = inputs.getButton(2) ? 1:0;
+
         // print sensor values
         printf(
-			"%.2lfC %.2lfC %.1lfml %.0lfmm\n",
-			temp, coreTemp, ml, range
+			"%.2lfC %.2lfC %.1lfml %.0lfmm %d %d\n",
+			temp, coreTemp, ml, range, b1, b2
 		);
     } while (true);
 

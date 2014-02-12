@@ -60,6 +60,7 @@ bool GPIOPin::getState() const
 {
 	if ( m_file < 0 ) return false;
 
+	lseek( m_file, 0, SEEK_SET );
 	char buffer[8] = {};
 	int result = read( m_file, &buffer, sizeof(buffer)-1 );
 

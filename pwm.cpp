@@ -32,6 +32,7 @@ PWM::PWM() :
 	m_range( 1024 ),
 	m_value( 512 )
 {
+	BCM::open();
 	initialise();
 }
 

@@ -98,6 +98,10 @@ int runController(
 
 	// open log file
 	ofstream out( fileName.c_str() );
+	if ( !out ) {
+		cerr << "error: unable to open log file " << fileName << endl;
+		return 1;
+	}
 
 	// check that flow meter is available
 	if ( !flow.ready() ) {
@@ -113,18 +117,10 @@ int runController(
 	}
 
 	// initialise digital thermometer
-	if ( !temperature.initialise() ) {
+	if ( !temperature.getDegrees(0) ) {
 		out << "error: thermometer not found\n";
 		return 1;
 	}
-
-	// set 10 bit resolution
-	temperature.setResolution( 10 );
-
-	// a couple of dummy temperature reads
-	double value = 0.0;
-	temperature.read( &value );
-	temperature.read( &value );
 
 	// read PID controller parameters from configuration
 	// these are the proportional, integral, derivate coefficients and
@@ -178,7 +174,7 @@ int runController(
 		double elapsed = getClock() - start;
 
 		double temp = 0.0;
-		while ( !temperature.read( &temp ) ) {}
+		temperature.getDegrees( &temp );
 
 		double drive = pid.update( targetTemp - temp, temp );
 
@@ -244,15 +240,12 @@ int runTests()
         << endl;
 
     cout << "temp: " <<
-        (temperature.initialise() ? "ready" : "not ready")
+        (temperature.getDegrees(0) ? "ready" : "not ready")
         << endl;
 
 	cout << "range: " <<
 		(ranger.initialise() ? "ready" : "not ready")
 		<< endl;
-
-    // set 10 bit resolution
-    temperature.setResolution( 10 );
 
     nonblock(1);
 
@@ -277,7 +270,7 @@ int runTests()
 
         // read temperature sensor
         double temp = 0.0;
-        while ( !temperature.read( &temp ) ) {}
+        temperature.getDegrees( &temp );
 
         // read core temperature
         double coreTemp = system.getCoreTemperature();

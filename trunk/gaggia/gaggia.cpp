@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <sched.h>
 #include <ctype.h>
+#include <signal.h>
+#include <unistd.h>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -30,6 +32,24 @@ static const string configFile( "/etc/gaggia.conf" );
 std::map<std::string, double> config;
 
 bool disableBoiler = false;		/// disable boiler if true (for testing)
+bool quit = false;				/// should we quit?
+
+//-----------------------------------------------------------------------------
+
+void signalHandler( int signal )
+{
+	switch ( signal ) {
+	case SIGINT:
+		printf( "gaggia: received SIGINT\n" );
+		quit = true;
+		break;
+
+	case SIGTERM:
+		printf( "gaggia: received SIGTERM\n" );
+		quit = true;
+		break;
+	}
+}
 
 //-----------------------------------------------------------------------------
 
@@ -97,6 +117,7 @@ int runController(
 	Inputs inputs;
 	Flow flow;
 	Display display;
+	Ranger ranger;
 
 	// open log file
 	ofstream out( fileName.c_str() );
@@ -168,6 +189,9 @@ int runController(
 
 		if ( interactive && kbhit() ) break;
 
+		// if asked to stop (e.g. via SIGINT)
+		if ( quit ) break;
+
 //		if ( inputs.getHaltButton() ) {
 //			halt = true;
 //			break;
@@ -207,6 +231,18 @@ int runController(
 
 		// update temperature display
 		display.updateTemperature( temp );
+
+        // range measurement (convert to mm)
+        double range = 1000.0 * ranger.getRange();
+
+		// simplistic conversion to water level
+		double minDist = 18.0;
+		double maxDist = 90.0;
+		range = std::max( minDist, std::min( range, maxDist ) );
+		double level = 1.0 - (range - minDist) / (maxDist - minDist);
+
+		// update water level display
+		display.updateLevel( level );
 
 		// sleep for remainder of time step
 		//double used = getClock() - elapsed - start;
@@ -256,6 +292,9 @@ int runTests()
     nonblock(1);
 
     do {
+		// if quit has been requested (e.g. via SIGINT)
+		if ( quit ) break;
+
         if ( kbhit() ) {
 			// get key
 			char key = getchar();
@@ -310,6 +349,18 @@ int runTests()
 
 int main( int argc, char **argv )
 {
+	// hook SIGINT so we can exit gracefully
+	if ( signal(SIGINT, signalHandler) == SIG_ERR ) {
+		cerr << "gaggia: failed to hook SIGINT\n";
+		return 1;
+	}
+
+	// hook SIGTERM so we can exit gracefully
+	if ( signal(SIGTERM, signalHandler) == SIG_ERR ) {
+		cerr << "gaggia: failed to hook SIGTERM\n";
+		return 1;
+	}
+
 	if ( argc < 2 ) {
 		cerr << "gaggia: expected a command\n";
 		return 1;

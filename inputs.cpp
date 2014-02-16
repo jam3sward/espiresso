@@ -22,8 +22,8 @@ Inputs::~Inputs()
 bool Inputs::getButton( int button ) const
 {
 	switch ( button ) {
-	case 1: return m_button1.getState(); break;
-	case 2: return m_button2.getState(); break;
+	case 1: return !m_button1.getState(); break;
+	case 2: return !m_button2.getState(); break;
 	}
 	return false;
 }

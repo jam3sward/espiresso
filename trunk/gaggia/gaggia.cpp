@@ -192,10 +192,12 @@ int runController(
 		// if asked to stop (e.g. via SIGINT)
 		if ( quit ) break;
 
-//		if ( inputs.getHaltButton() ) {
-//			halt = true;
-//			break;
-//		}
+		// if button 1 is pushed, exit
+		if ( inputs.getButton(1) ) {
+			// shutdown the system
+			halt = true;
+			break;
+		}
 
 		double elapsed = getClock() - start;
 

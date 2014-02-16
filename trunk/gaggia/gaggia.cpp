@@ -16,6 +16,7 @@
 #include "keyboard.h"
 #include "inputs.h"
 #include "system.h"
+#include "display.h"
 
 using namespace std;
 
@@ -95,6 +96,7 @@ int runController(
 	Boiler boiler;
 	Inputs inputs;
 	Flow flow;
+	Display display;
 
 	// open log file
 	ofstream out( fileName.c_str() );
@@ -203,6 +205,9 @@ int runController(
 			printf( "%.2lf %.2lf %.1lf\n", elapsed, temp, ml );
 		}
 
+		// update temperature display
+		display.updateTemperature( temp );
+
 		// sleep for remainder of time step
 		//double used = getClock() - elapsed - start;
 		double remain = next - getClock();;
@@ -234,6 +239,7 @@ int runTests()
 	Pump pump;
 	Inputs inputs;
     System system;
+	Display display;
 
     cout << "flow: " <<
         (flow.ready() ? "ready" : "not ready")
@@ -290,6 +296,9 @@ int runTests()
 			"%.2lfC %.2lfC %.1lfml %.0lfmm %d %d\n",
 			temp, coreTemp, ml, range, b1, b2
 		);
+
+		// update temperature on display
+		display.updateTemperature( temp );
     } while (true);
 
     nonblock(0);

@@ -33,6 +33,7 @@ std::map<std::string, double> config;
 
 bool disableBoiler = false;		/// disable boiler if true (for testing)
 bool quit = false;				/// should we quit?
+bool stopPump = false;			/// signal to stop pump
 
 //-----------------------------------------------------------------------------
 
@@ -269,6 +270,23 @@ int runController(
 
 //-----------------------------------------------------------------------------
 
+static void flowHandler( Flow::NotifyType type ) {
+	switch ( type ) {
+	case Flow::Start :
+		cout << "flow: started\n";
+		break;
+
+	case Flow::Stop  :
+		cout << "flow: stopped\n";
+		break;
+
+	case Flow::Target:
+		stopPump = true;
+		cout << "flow: target reached\n";
+		break;
+	}
+}
+
 int runTests()
 {
     Temperature temperature;
@@ -290,6 +308,10 @@ int runTests()
 	cout << "range: " <<
 		(ranger.initialise() ? "ready" : "not ready")
 		<< endl;
+
+	flow
+		.notifyRegister( &flowHandler )
+		.notifyAfter( 10.0 / 1000.0 );
 
     nonblock(1);
 
@@ -313,6 +335,12 @@ int runTests()
 			}
 
 			if (stop) break;
+		}
+
+		// received request to stop pump
+		if ( stopPump ) {
+			pump.setState( false );
+			stopPump = false;
 		}
 
         // read temperature sensor

@@ -44,10 +44,36 @@ void Flow::worker()
 	// rising and falling edges
 	m_flowPin.setOutput( false ).setEdgeTrigger( GPIOPin::Both );
 
+	// timeout period for detecting pulses
+	const unsigned timeout = 250;
+	const unsigned idleTimeout = 1000;
+
+	// is liquid flowing?
+	bool flowing  = false;
+
+	// how long has the flow sensor been idle?
+	unsigned idleTime = 0;
+
 	// poll for interrupts and count pulses
 	while (m_run) {
-		if ( m_flowPin.poll( 250 ) ) {
+		bool wasFlowing = flowing;
+
+		if ( m_flowPin.poll( timeout ) ) {
 			// received an interrupt
+
+			// fluid is flowing
+			flowing = true;
+
+			// notification when flow starts
+			if ( flowing != wasFlowing ) {
+				if ( m_notifyFunc ) try {
+					std::async(
+						std::launch::async,
+						m_notifyFunc, Flow::Start
+					);
+				} catch ( const std::system_error & e ) {
+				}
+			}
 
 			bool notify = false;
 
@@ -71,16 +97,34 @@ void Flow::worker()
 					// call it asynchronously
 					std::async(
 						std::launch::async,
-						m_notifyFunc
+						m_notifyFunc, Flow::Target
 					);
 				} catch ( const std::system_error & e ) {
 					// couldn't start thread: call from this one
 					if ( e.code() == std::errc::resource_unavailable_try_again )
-						m_notifyFunc();
+						m_notifyFunc( Flow::Target );
 				}
 			}
 		} else {
 			// timed out (opportunity to exit)
+
+			// count how long the flow sensor has been idle
+			idleTime += timeout;
+
+			if ( idleTime >= idleTimeout ) {
+				flowing = false;
+				idleTime = 0;
+			}
+
+			if ( flowing != wasFlowing ) {
+				if ( m_notifyFunc ) try {
+					std::async(
+						std::launch::async,
+						m_notifyFunc, Flow::Stop
+					);
+				} catch ( const std::system_error & e ) {
+				}
+			}
 		}
 	}
 }//worker
@@ -115,7 +159,18 @@ double Flow::getLitres() const
 
 //-----------------------------------------------------------------------------
 
-Flow & Flow::notifyAfter( double litres, NotifyFunc func )
+Flow & Flow::notifyRegister( NotifyFunc func )
+{
+	// set up the notification
+	std::lock_guard<std::mutex> lock( m_mutex );
+	m_notifyFunc = func;
+
+	return *this;
+}
+
+//-----------------------------------------------------------------------------
+
+Flow & Flow::notifyAfter( double litres )
 {
 	// convert litres to an integer number of counts
 	unsigned amount = static_cast<unsigned>(
@@ -124,8 +179,9 @@ Flow & Flow::notifyAfter( double litres, NotifyFunc func )
 
 	// set up the notification
 	std::lock_guard<std::mutex> lock( m_mutex );
-	m_notifyFunc  = func;
 	m_notifyCount = m_count + amount;
+
+	return *this;
 }
 
 //-----------------------------------------------------------------------------
@@ -136,6 +192,8 @@ Flow & Flow::notifyCancel()
 	std::lock_guard<std::mutex> lock( m_mutex );
 	m_notifyFunc  = nullptr;
 	m_notifyCount = 0;
+
+	return *this;
 }
 
 //-----------------------------------------------------------------------------

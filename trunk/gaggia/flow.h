@@ -28,13 +28,23 @@ public:
 	/// sensor in litres
 	double getLitres() const;
 
+	/// Notification type
+	enum NotifyType {
+		Start,	///< Flow has started
+		Stop,	///< Flow has stopped
+		Target	///< Flow has reached target volume
+	};
+
 	/// Notification function type
-	typedef std::function<void(void)> NotifyFunc;
+	typedef std::function<void(NotifyType type)> NotifyFunc;
+
+	/// Register function to receive notifications. The notification function
+	/// is called asynchronously from another thread.
+	Flow & notifyRegister( NotifyFunc func );
 
 	/// Receive a notification when a given number of litres have been
-	/// delivered. The notification function is called asynchronously
-	/// from another thread.
-	Flow & notifyAfter( double litres, NotifyFunc func );
+	/// delivered.
+	Flow & notifyAfter( double litres );
 
 	/// Disable notifications
 	Flow & notifyCancel();

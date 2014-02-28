@@ -1,6 +1,7 @@
-11. GPIO17 = DS18B20 Thermometer
-12. GPIO18 = SSR
-13. GPIO21 = Flow Sensor
-16. GPIO23 = Ultrasonic Ranger Echo In
-18. GPIO24 = Halt Button
-22. GPIO25 = Ultrasonic Ranger Trigger Out
+ 3. GPIO2  = Button 1 (BUTTON1)
+ 5. GPIO3  = Button 2 (BUTTON2)
+ 7. GPIO4  = DS18B20 Thermometer (TEMPERATURE_BUS)
+12. GPIO18 = SSR (SSR_OUT)
+13. GPIO27 = Flow Sensor (FLOW_IN)
+15. GPIO22 = Ultrasonic Ranger Echo In (RANGER_ECHO_IN)
+16. GPIO23 = Ultrasonic Ranger Trigger Out (RANGER_TRIGGER_OUT)

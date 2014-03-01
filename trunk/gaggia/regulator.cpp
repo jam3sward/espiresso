@@ -9,6 +9,7 @@ Regulator::Regulator() :
 	m_timeStep( 1.0 ),
 	m_targetTemp( 95.0 ),
 	m_latestTemp( 20.0 ),
+	m_latestPower( 0.0 ),
 	m_thread( &Regulator::worker, this )
 {
 }
@@ -16,6 +17,29 @@ Regulator::Regulator() :
 //-----------------------------------------------------------------------------
 
 Regulator::~Regulator()
+{
+	// stop thread execution
+	stop();
+}
+
+//-----------------------------------------------------------------------------
+
+bool Regulator::start()
+{
+	// stop any existing thread
+	stop();
+
+	// start thread
+	m_run = true;
+	m_thread = std::thread( &Regulator::worker, this );
+
+	// todo: possible indication of failed initialisation
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+
+void Regulator::stop()
 {
 	// gracefully terminate the thread
 	m_run = false;
@@ -78,6 +102,14 @@ double Regulator::getTemperature() const
 
 //-----------------------------------------------------------------------------
 
+double Regulator::getPowerLevel() const
+{
+	std::lock_guard<std::mutex> lock( m_mutex );
+	return m_latestPower;
+}
+
+//-----------------------------------------------------------------------------
+
 Regulator & Regulator::setPower( bool power )
 {
 	std::lock_guard<std::mutex> lock( m_mutex );
@@ -134,7 +166,8 @@ void Regulator::worker()
 		// store the latest temperature reading
 		{
 			std::lock_guard<std::mutex> lock( m_mutex );
-			m_latestTemp = latestTemp;
+			m_latestTemp  = latestTemp;
+			m_latestPower = drive;
 		}
 
 		// sleep for the remainder of the time step

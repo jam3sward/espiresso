@@ -26,6 +26,12 @@ public:
 	/// Destructor
 	virtual ~Regulator();
 
+	/// Start controller
+	bool start();
+
+	/// Stop control loop
+	void stop();
+
 	/// Set the Proportional, Integral and Derivative gains
 	Regulator & setPIDGains( double pGain, double iGain, double dGain );
 
@@ -43,6 +49,9 @@ public:
 
 	/// Read the temperature in degrees C
 	double getTemperature() const;
+
+	/// Read the boiler power level (0..1)
+	double getPowerLevel() const;
 
 	/// Switch boiler power on/off
 	Regulator & setPower( bool power );
@@ -64,6 +73,7 @@ private:
 	double		m_timeStep;		///< Time step in seconds
 	double		m_targetTemp;	///< Target temperature in degrees
 	double		m_latestTemp;	///< Latest temperature in degrees
+	double		m_latestPower;	///< Latest power level (0..1)
 	Temperature	m_temperature;	///< Temperature sensor
 	Boiler		m_boiler;		///< Boiler control
 };

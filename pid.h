@@ -8,14 +8,17 @@ struct PIDControl {
 	/// Default constructor
 	PIDControl();
 
+	/// Destructor
+	virtual ~PIDControl();
+
 	/// Set the Proportional, Integral and Derivative gains
-	void setPIDGains( double pGain, double iGain, double dGain );
+	virtual PIDControl & setPIDGains( double pGain, double iGain, double dGain );
 
 	/// Set the lower and upper limits for the integrator
-	void setIntegratorLimits( double iMin, double iMax );
+	virtual PIDControl & setIntegratorLimits( double iMin, double iMax );
 
 	/// Update loop
-	double update( double error, double position );
+	virtual double update( double error, double position );
 
 private:
 	double m_dState;	///< Last position input

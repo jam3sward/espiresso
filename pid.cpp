@@ -15,19 +15,27 @@ PIDControl::PIDControl() :
 
 //-----------------------------------------------------------------------------
 
-void PIDControl::setPIDGains( double pGain, double iGain, double dGain )
+PIDControl::~PIDControl()
 {
-	m_pGain = pGain;
-	m_iGain = iGain;
-	m_dGain = dGain;
 }
 
 //-----------------------------------------------------------------------------
 
-void PIDControl::setIntegratorLimits( double iMin, double iMax )
+PIDControl & PIDControl::setPIDGains( double pGain, double iGain, double dGain )
+{
+	m_pGain = pGain;
+	m_iGain = iGain;
+	m_dGain = dGain;
+	return *this;
+}
+
+//-----------------------------------------------------------------------------
+
+PIDControl & PIDControl::setIntegratorLimits( double iMin, double iMax )
 {
 	m_iMin = iMin;
 	m_iMax = iMax;
+	return *this;
 }
 
 //-----------------------------------------------------------------------------

@@ -29,7 +29,7 @@ public:
 	void powerOff();
 
 private:
-	PWM	 m_pwm;		/// Hardware PWM
+	PWM	 m_pwm;		///< Hardware PWM
 };
 
 //-----------------------------------------------------------------------------

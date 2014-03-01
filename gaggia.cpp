@@ -9,9 +9,7 @@
 #include <map>
 
 #include "timing.h"
-#include "pid.h"
-#include "temperature.h"
-#include "boiler.h"
+#include "regulator.h"
 #include "flow.h"
 #include "pump.h"
 #include "ranger.h"
@@ -113,8 +111,7 @@ int runController(
 	bool interactive,
 	const std::string & fileName
 ) {
-	Temperature temperature;
-	Boiler boiler;
+	Regulator regulator;
 	Inputs inputs;
 	Flow flow;
 	Display display;
@@ -140,12 +137,6 @@ int runController(
 		return 1;
 	}
 
-	// initialise digital thermometer
-	if ( !temperature.getDegrees(0) ) {
-		out << "error: thermometer not found\n";
-		return 1;
-	}
-
 	// read PID controller parameters from configuration
 	// these are the proportional, integral, derivate coefficients and
 	// the integrator limits
@@ -155,15 +146,17 @@ int runController(
 	const double kMin = config["iMin"];
 	const double kMax = config["iMax"];
 
-	PIDControl pid;
-	pid.setPIDGains( kP, kI, kD );
-	pid.setIntegratorLimits( kMin, kMax );
+	// set the PID controller parameters
+	regulator.setPIDGains( kP, kI, kD );
+	regulator.setIntegratorLimits( kMin, kMax );
 
 	// target temperature in degrees centigrade
 	double targetTemp = config["targetTemp"];
+	regulator.setTargetTemperature( targetTemp );
 
 	// time step in seconds
 	double timeStep = config["timeStep"];
+	regulator.setTimeStep( timeStep );
 
 	// output parameters to log
 	char buffer[512];
@@ -179,15 +172,24 @@ int runController(
 	if ( interactive )
 		nonblock(1);
 
+	// request to halt the system (shutdown the Pi)
 	bool halt = false;
 
-	short old = 0;
+	// time step for user interface / display
+	const double timeStepGUI = 0.5;
+
+	// start time and next time step
 	double start = getClock();
 	double next  = start;
+
+	// turn on the power and start the regulator (boiler will begin to heat)
+	regulator.setPower( true ).start();
+
 	do {
 		// next time step
-		next += timeStep;
+		next += timeStepGUI;
 
+		// in interactive mode, exit if any key is pressed
 		if ( interactive && kbhit() ) break;
 
 		// if asked to stop (e.g. via SIGINT)
@@ -200,22 +202,14 @@ int runController(
 			break;
 		}
 
+		// calculate elapsed time
 		double elapsed = getClock() - start;
 
-		double temp = 0.0;
-		temperature.getDegrees( &temp );
+		// get the latest temperature reading
+		double latestTemp = regulator.getTemperature();
 
-		double drive = pid.update( targetTemp - temp, temp );
-
-		if ( drive > 1.0 )
-			drive = 1.0;
-		else if ( drive < 0.0 )
-			drive = 0.0;
-
-		// turn on the boiler (pulse width modulation)
-		// note: will leave boiler on if drive is 1
-		if ( !disableBoiler )
-			boiler.setPower( drive );
+		// get the latest boiler power level
+		double powerLevel = regulator.getPowerLevel();
 
 		// number of millilitres of water drawn up by the pump
 		double ml = 1000.0 * flow.getLitres();
@@ -224,16 +218,16 @@ int runController(
 		sprintf(
 			buffer,
 			"%.3lf,%.2lf,%.2lf,%.1lf",
-			elapsed, drive, temp, ml
+			elapsed, powerLevel, latestTemp, ml
 		);
 		out << buffer << endl;
 
 		if (interactive) {
-			printf( "%.2lf %.2lf %.1lf\n", elapsed, temp, ml );
+			printf( "%.2lf %.2lf %.1lf\n", elapsed, latestTemp, ml );
 		}
 
 		// update temperature display
-		display.updateTemperature( temp );
+		display.updateTemperature( latestTemp );
 
         // range measurement (convert to mm)
         double range = 1000.0 * ranger.getRange();
@@ -248,17 +242,16 @@ int runController(
 		display.updateLevel( level );
 
 		// sleep for remainder of time step
-		//double used = getClock() - elapsed - start;
 		double remain = next - getClock();;
 		if ( remain > 0.0 )
-			delayms( (int)(1.0E3 * remain) );
+			delayms( static_cast<int>(1.0E3 * remain) );
 	} while (true);
 
 	if ( interactive )
 		nonblock(0);
 
-	// turn the boiler off before we exit!
-	boiler.powerOff();
+	// turn the boiler off before we exit
+	regulator.setPower( false );
 
 	// if the halt button was pushed, halt the system
 	if ( halt ) {

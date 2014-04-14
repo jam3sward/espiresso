@@ -5,3 +5,4 @@
 13. GPIO27 = Flow Sensor (FLOW_IN)
 15. GPIO22 = Ultrasonic Ranger Echo In (RANGER_ECHO_IN)
 16. GPIO23 = Ultrasonic Ranger Trigger Out (RANGER_TRIGGER_OUT)
+18. GPIO24 = TSIC306 Temperature Sensor (TEMPERATURE_TSIC1)

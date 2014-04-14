@@ -140,7 +140,9 @@ void Regulator::worker()
 		// boiler drive (duty cycle)
 		double drive = 0.0;
 
-		{
+		// if the temperature is near zero, we assume there's an error
+		// reading the sensor and drive (duty cycle) will be zero
+		if ( latestTemp > 0.5 ) {
 			// lock shared data before use
 			std::lock_guard<std::mutex> lock( m_mutex );
 

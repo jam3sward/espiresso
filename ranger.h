@@ -5,7 +5,6 @@
 
 #include <thread>
 #include <mutex>
-#include "gpiopin.h"
 
 //-----------------------------------------------------------------------------
 
@@ -38,8 +37,6 @@ private:
 	double measureRange();
 
 private:
-	GPIOPin m_trigger;		///< Output pin used to trigger the ranger
-	GPIOPin m_echo;			///< Input pin used to receive the echo signal
 	double  m_timeLastRun;	///< Time when getRange() was last called
 
 	double	m_range;		///< Last range measurement

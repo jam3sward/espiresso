@@ -1,24 +1,17 @@
 #include "ranger.h"
 #include <math.h>
+#include <fstream>
 #include "settings.h"
 #include "timing.h"
+using namespace std;
 
 //-----------------------------------------------------------------------------
 
 Ranger::Ranger() :
-	m_trigger( RANGER_TRIGGER_OUT ),
-	m_echo( RANGER_ECHO_IN ),
 	m_range( 0.0 ),
 	m_count( 0 ),
 	m_run( true )
 {
-	// make trigger an output and set it low
-	m_trigger.setOutput( true ).setState( false );
-
-	// make echo an input and enable edge triggered interrupts on both
-	// rising and falling edges
-	m_echo.setOutput( false ).setEdgeTrigger( GPIOPin::Both );
-
 	// record current time as last run time, in case the initialisation
 	// above has triggered the ranger
 	m_timeLastRun = getClock();
@@ -124,10 +117,7 @@ double Ranger::measureRange()
 {
     // minimum time (in seconds) between successive calls
     // this is to prevent the ranger from being triggered too frequently
-    const double minimumInterval = 0.25;
-
-    // timeout in milliseconds when waiting for echo
-    const unsigned timeout = 60;
+    const double minimumInterval = 0.1;
 
     double elapsed = 0.0;   // elapsed time in seconds
     bool response = false;  // have we received a reply?
@@ -143,30 +133,18 @@ double Ranger::measureRange()
     // remember time of last run
     m_timeLastRun = getClock();
 
-    // transmit 10us high pulse to trigger the ranger
-	m_trigger.usPulse( true, 10 );
+    // open the range finder via the hcsr04 kernel module
+    ifstream in( "/sys/kernel/hcsr04/range" );
+    // read the first value from the file (range in mm)
+    long value = 0;
+    in >> value;
+    // basic check for valid response
+    response = in.good() && (value != 0);
+    // close the file
+    in.close();
 
-    // wait for rising edge
-    if ( m_echo.poll( timeout ) ) {
-        // record time of rising edge
-        double rise = getClock();
-
-		// wait for falling edge
-        if ( m_echo.poll( timeout ) ) {
-            // record time of falling edge
-            double fall = getClock();
-
-            // calculate elapsed time
-            elapsed = fall - rise;
-
-            // set flag to indicate that a response was received
-            response = true;
-        }
-    }
-
-    // calculate distance in m
-    double speedOfSound = 340.27;   // m/s
-    double distance = elapsed * speedOfSound / 2.0;
+    // convert range to m
+    double distance = static_cast<double>(value) / 1000.0;
 
     // return distance (or zero if echo not received)
     if ( response )

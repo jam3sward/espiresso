@@ -56,6 +56,9 @@ public:
 	/// Switch boiler power on/off
 	Regulator & setPower( bool power );
 
+    /// Returns true if boiler power is on
+    bool getPower() const;
+
 private:
 	/// Worker thread which regulates boiler temperature
 	void worker();

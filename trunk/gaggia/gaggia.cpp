@@ -233,8 +233,8 @@ int runController(
         double range = 1000.0 * ranger.getRange();
 
 		// simplistic conversion to water level
-		double minDist = 18.0;
-		double maxDist = 90.0;
+		double minDist = 20.0;
+		double maxDist = 100.0;
 		range = std::max( minDist, std::min( range, maxDist ) );
 		double level = 1.0 - (range - minDist) / (maxDist - minDist);
 
@@ -274,7 +274,7 @@ static void flowHandler( Flow::NotifyType type ) {
 		break;
 
 	case Flow::Target:
-		stopPump = true;
+        stopPump = true;
 		cout << "flow: target reached\n";
 		break;
 	}
@@ -304,7 +304,7 @@ int runTests()
 
 	flow
 		.notifyRegister( &flowHandler )
-		.notifyAfter( 10.0 / 1000.0 );
+		.notifyAfter( 60.0 / 1000.0 );
 
     nonblock(1);
 
@@ -319,9 +319,23 @@ int runTests()
 			bool stop = false;
 			switch ( tolower(key) ) {
 			case 'p':
+                if ( !pump.getState() ) {
+                    stopPump = false;
+                    flow.notifyAfter( 60.0 / 1000.0 );
+                }
 				pump.setState( !pump.getState() );
 				cout << "pump: " << (pump.getState() ? "on" : "off") << endl;
 				break;
+
+            case 'r':
+                {
+                    double range = 0.0;
+                    const int count = 50;
+                    for (int i=0; i<count; ++i)
+                        range += ranger.getRange() * 1000.0;
+                    cout << "range average: " << range / static_cast<double>(count) << endl;
+                }
+                break;
 
 			default:
 				stop = true;
@@ -361,6 +375,8 @@ int runTests()
 
 		// update temperature on display
 		display.updateTemperature( temp );
+
+		delayms(250);
     } while (true);
 
     nonblock(0);

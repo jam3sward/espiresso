@@ -119,6 +119,14 @@ Regulator & Regulator::setPower( bool power )
 
 //-----------------------------------------------------------------------------
 
+bool Regulator::getPower() const
+{
+    std::lock_guard<std::mutex> lock( m_mutex );
+    return m_power;
+}
+
+//-----------------------------------------------------------------------------
+
 void Regulator::worker()
 {
 	// initialise digital thermometer

@@ -28,7 +28,7 @@ keyboard.o: keyboard.h keyboard.cpp
 	g++ -c keyboard.cpp
 
 inputs.o: inputs.h inputs.cpp
-	g++ -c inputs.cpp
+	g++ -c inputs.cpp -std=c++0x
 
 gpiopin.o: gpiopin.h gpiopin.cpp
 	g++ -c gpiopin.cpp

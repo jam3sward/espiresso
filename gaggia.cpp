@@ -29,9 +29,16 @@ static const string configFile( "/etc/gaggia.conf" );
 
 std::map<std::string, double> config;
 
-bool disableBoiler = false;		/// disable boiler if true (for testing)
-bool quit = false;				/// should we quit?
-bool stopPump = false;			/// signal to stop pump
+bool g_enableBoiler = true;	///< Enable boiler if true
+bool g_quit = false;		///< Should we quit?
+bool g_halt = false;        ///< Should we halt? (shutdown the system)
+
+double g_shotSize = 60.0;   ///< Shot size in ml
+
+Pump      g_pump;           ///< Pump controller
+Flow      g_flow;           ///< Flow sensor
+Inputs    g_inputs;         ///< Inputs (buttons)
+Regulator g_regulator;      ///< Temperature regulator
 
 //-----------------------------------------------------------------------------
 
@@ -39,13 +46,85 @@ void signalHandler( int signal )
 {
 	switch ( signal ) {
 	case SIGINT:
-		printf( "gaggia: received SIGINT\n" );
-		quit = true;
+		printf( "\ngaggia: received SIGINT\n" );
+		g_quit = true;
 		break;
 
 	case SIGTERM:
-		printf( "gaggia: received SIGTERM\n" );
-		quit = true;
+		printf( "\ngaggia: received SIGTERM\n" );
+		g_quit = true;
+		break;
+	}
+}
+
+//-----------------------------------------------------------------------------
+
+/// Called when buttons are pressed or released
+void buttonHandler(
+    int button,     // button number (1,2)
+    bool state,     // pressed (true) or released (false)
+    double time     // time period since last state change
+) {
+    switch ( button ) {
+    case 1:
+        if ( state ) {
+            // button 1 pushed
+
+            // if the pump is idle
+            if ( !g_pump.getState() ) {
+                // ask the flow sensor to notify us after a shot
+                // has been dispensed
+                g_flow.notifyAfter( g_shotSize / 1000.0 );
+                // turn on the pump
+                g_pump.setState( true );
+            } else {
+                // pump is already running: turn it off
+                g_pump.setState( false );
+            }
+        } else {
+            // button 1 released
+        }
+        break;
+
+    case 2:
+        if ( state ) {
+            // button 2 pushed
+        } else {
+            // button 2 released
+            if ( time >= 1.0 ) {
+                // button was held for 1 second, shut down the system
+                cout << "gaggia: shutting down\n";
+                g_halt = true;
+                g_quit = true;
+            } else {
+                // button was pushed briefly, toggle boiler power
+                g_regulator.setPower( !g_regulator.getPower() );
+                cout << "gaggia: boiler "
+                     << (g_regulator.getPower() ? "enabled" : "disabled")
+                     << endl;
+            }
+        }
+        break;
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+/// Called when notifications are received from the flow sensor
+static void flowHandler( Flow::NotifyType type ) {
+	switch ( type ) {
+	case Flow::Start :
+		cout << "flow: started\n";
+		break;
+
+	case Flow::Stop  :
+		cout << "flow: stopped\n";
+		break;
+
+	case Flow::Target:
+		cout << "flow: target reached\n";
+        // stop the pump
+        g_pump.setState( false );
 		break;
 	}
 }
@@ -111,9 +190,6 @@ int runController(
 	bool interactive,
 	const std::string & fileName
 ) {
-	Regulator regulator;
-	Inputs inputs;
-	Flow flow;
 	Display display;
 	Ranger ranger;
 
@@ -125,7 +201,7 @@ int runController(
 	}
 
 	// check that flow meter is available
-	if ( !flow.ready() ) {
+	if ( !g_flow.ready() ) {
 		out << "error: flow meter not ready\n";
 		return 1;
 	}
@@ -137,6 +213,9 @@ int runController(
 		return 1;
 	}
 
+    // shot size in millilitres
+    g_shotSize = config["shotSize"];
+
 	// read PID controller parameters from configuration
 	// these are the proportional, integral, derivate coefficients and
 	// the integrator limits
@@ -147,16 +226,16 @@ int runController(
 	const double kMax = config["iMax"];
 
 	// set the PID controller parameters
-	regulator.setPIDGains( kP, kI, kD );
-	regulator.setIntegratorLimits( kMin, kMax );
+	g_regulator.setPIDGains( kP, kI, kD );
+	g_regulator.setIntegratorLimits( kMin, kMax );
 
 	// target temperature in degrees centigrade
 	double targetTemp = config["targetTemp"];
-	regulator.setTargetTemperature( targetTemp );
+	g_regulator.setTargetTemperature( targetTemp );
 
 	// time step in seconds
 	double timeStep = config["timeStep"];
-	regulator.setTimeStep( timeStep );
+	g_regulator.setTimeStep( timeStep );
 
 	// output parameters to log
 	char buffer[512];
@@ -172,18 +251,15 @@ int runController(
 	if ( interactive )
 		nonblock(1);
 
-	// request to halt the system (shutdown the Pi)
-	bool halt = false;
-
 	// time step for user interface / display
-	const double timeStepGUI = 0.5;
+	const double timeStepGUI = 0.25;
 
 	// start time and next time step
 	double start = getClock();
 	double next  = start;
 
 	// turn on the power and start the regulator (boiler will begin to heat)
-	regulator.setPower( true ).start();
+	g_regulator.setPower( g_enableBoiler ).start();
 
 	do {
 		// next time step
@@ -193,26 +269,19 @@ int runController(
 		if ( interactive && kbhit() ) break;
 
 		// if asked to stop (e.g. via SIGINT)
-		if ( quit ) break;
-
-		// if button 1 is pushed, exit
-		if ( inputs.getButton(1) ) {
-			// shutdown the system
-			halt = true;
-			break;
-		}
+		if ( g_quit ) break;
 
 		// calculate elapsed time
 		double elapsed = getClock() - start;
 
 		// get the latest temperature reading
-		double latestTemp = regulator.getTemperature();
+		double latestTemp = g_regulator.getTemperature();
 
 		// get the latest boiler power level
-		double powerLevel = regulator.getPowerLevel();
+		double powerLevel = g_regulator.getPowerLevel();
 
 		// number of millilitres of water drawn up by the pump
-		double ml = 1000.0 * flow.getLitres();
+		double ml = 1000.0 * g_flow.getLitres();
 
 		// dump values to log file
 		sprintf(
@@ -251,10 +320,10 @@ int runController(
 		nonblock(0);
 
 	// turn the boiler off before we exit
-	regulator.setPower( false );
+	g_regulator.setPower( false );
 
 	// if the halt button was pushed, halt the system
-	if ( halt ) {
+	if ( g_halt ) {
 		system( "halt" );
 	}
 
@@ -263,35 +332,15 @@ int runController(
 
 //-----------------------------------------------------------------------------
 
-static void flowHandler( Flow::NotifyType type ) {
-	switch ( type ) {
-	case Flow::Start :
-		cout << "flow: started\n";
-		break;
-
-	case Flow::Stop  :
-		cout << "flow: stopped\n";
-		break;
-
-	case Flow::Target:
-        stopPump = true;
-		cout << "flow: target reached\n";
-		break;
-	}
-}
-
 int runTests()
 {
     Temperature temperature;
-    Flow flow;
     Ranger ranger;
-	Pump pump;
-	Inputs inputs;
     System system;
 	Display display;
 
     cout << "flow: " <<
-        (flow.ready() ? "ready" : "not ready")
+        (g_flow.ready() ? "ready" : "not ready")
         << endl;
 
     cout << "temp: " <<
@@ -302,15 +351,13 @@ int runTests()
 		(ranger.initialise() ? "ready" : "not ready")
 		<< endl;
 
-	flow
-		.notifyRegister( &flowHandler )
-		.notifyAfter( 60.0 / 1000.0 );
+	g_flow.notifyAfter( g_shotSize / 1000.0 );
 
     nonblock(1);
 
     do {
 		// if quit has been requested (e.g. via SIGINT)
-		if ( quit ) break;
+		if ( g_quit ) break;
 
         if ( kbhit() ) {
 			// get key
@@ -319,12 +366,11 @@ int runTests()
 			bool stop = false;
 			switch ( tolower(key) ) {
 			case 'p':
-                if ( !pump.getState() ) {
-                    stopPump = false;
-                    flow.notifyAfter( 60.0 / 1000.0 );
+                if ( !g_pump.getState() ) {
+                    g_flow.notifyAfter( 60.0 / 1000.0 );
                 }
-				pump.setState( !pump.getState() );
-				cout << "pump: " << (pump.getState() ? "on" : "off") << endl;
+				g_pump.setState( !g_pump.getState() );
+				cout << "pump: " << (g_pump.getState() ? "on" : "off") << endl;
 				break;
 
             case 'r':
@@ -345,10 +391,7 @@ int runTests()
 		}
 
 		// received request to stop pump
-		if ( stopPump ) {
-			pump.setState( false );
-			stopPump = false;
-		}
+		g_pump.setState( false );
 
         // read temperature sensor
         double temp = 0.0;
@@ -358,19 +401,15 @@ int runTests()
         double coreTemp = system.getCoreTemperature();
 
         // number of millilitres of water drawn up by the pump
-        double ml = 1000.0 * flow.getLitres();
+        double ml = 1000.0 * g_flow.getLitres();
 
         // range measurement (convert to mm)
         double range = 1000.0 * ranger.getRange();
 
-		// get button states
-		int b1 = inputs.getButton(1) ? 1:0;
-		int b2 = inputs.getButton(2) ? 1:0;
-
         // print sensor values
         printf(
-			"%.2lfC %.2lfC %.1lfml %.0lfmm %d %d\n",
-			temp, coreTemp, ml, range, b1, b2
+			"%.2lfC %.2lfC %.1lfml %.0lfmm\n",
+			temp, coreTemp, ml, range
 		);
 
 		// update temperature on display
@@ -400,6 +439,10 @@ int main( int argc, char **argv )
 		return 1;
 	}
 
+    // register notification handlers
+    g_inputs.notifyRegister( &buttonHandler );
+    g_flow.notifyRegister( &flowHandler );
+
 	if ( argc < 2 ) {
 		cerr << "gaggia: expected a command\n";
 		return 1;
@@ -413,9 +456,10 @@ int main( int argc, char **argv )
 		string option( argv[i] );
 		if ( option == "-i" )
 			interactive = true;
-		else if ( option == "-d" )
-			disableBoiler = true;
-		else
+		else if ( option == "-d" ) {
+            // disable the boiler
+			g_enableBoiler = false;
+		} else
 			cerr << "gaggia: unexpected option\n";
 	}
 

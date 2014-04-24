@@ -98,6 +98,8 @@ void Inputs::worker()
                 double elapsed = now - button[i].timeStamp;
                 button[i].timeStamp = now;
 
+                std::lock_guard<std::mutex> lock( m_mutex );
+
                 // fire the notification function
                 if ( m_notifyFunc ) try {
                     std::async(

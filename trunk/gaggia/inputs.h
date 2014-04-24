@@ -45,6 +45,9 @@ private:
 
     /// Thread used to monitor the inputs
     std::thread m_thread;
+
+    /// Mutex to control access to shared members
+    mutable std::mutex m_mutex;
 };
 
 //-----------------------------------------------------------------------------

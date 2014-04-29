@@ -190,6 +190,12 @@ int runController(
 	bool interactive,
 	const std::string & fileName
 ) {
+    // if button 2 is pushed during initialisation, abort
+    if ( g_inputs.getButton(2) ) {
+        cerr << "gaggia: button 2 is down: aborting" << endl;
+        return 1;
+    }
+
 	Display display;
 	Ranger ranger;
 

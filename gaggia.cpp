@@ -361,7 +361,17 @@ int runTests()
 
     nonblock(1);
 
+	// time step
+	const double timeStep = 0.5;
+
+	// start time and next time step
+	double start = getClock();
+	double next  = start;
+
     do {
+        // calculate next time step
+        next += timeStep;
+
 		// if quit has been requested (e.g. via SIGINT)
 		if ( g_quit ) break;
 
@@ -421,7 +431,10 @@ int runTests()
 		// update temperature on display
 		display.updateTemperature( temp );
 
-		delayms(250);
+		// sleep for remainder of time step
+		double remain = next - getClock();;
+		if ( remain > 0.0 )
+			delayms( static_cast<int>(1.0E3 * remain) );
     } while (true);
 
     nonblock(0);

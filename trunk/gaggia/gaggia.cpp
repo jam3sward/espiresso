@@ -406,9 +406,6 @@ int runTests()
 			if (stop) break;
 		}
 
-		// received request to stop pump
-		g_pump.setState( false );
-
         // read temperature sensor
         double temp = 0.0;
         temperature.getDegrees( &temp );

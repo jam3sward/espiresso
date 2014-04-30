@@ -45,7 +45,7 @@ void Flow::worker()
 	m_flowPin.setOutput( false ).setEdgeTrigger( GPIOPin::Both );
 
 	// timeout period for detecting pulses
-	const unsigned timeout = 250;
+	const unsigned timeout = 1000;
 	const unsigned idleTimeout = 1000;
 
 	// is liquid flowing?

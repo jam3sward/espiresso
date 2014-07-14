@@ -49,3 +49,55 @@ double getClock()
 }
 
 //-----------------------------------------------------------------------------
+
+Timer::Timer()
+{
+    reset();
+}
+
+//-----------------------------------------------------------------------------
+
+Timer & Timer::reset()
+{
+    m_startTime = getClock();
+    m_stopTime  = m_startTime;
+    m_running   = true;
+    return *this;
+}
+
+//-----------------------------------------------------------------------------
+
+Timer & Timer::start()
+{
+    m_startTime = getClock();
+    m_running   = true;
+}
+
+//-----------------------------------------------------------------------------
+
+double Timer::stop()
+{
+    m_stopTime  = getClock();
+    m_running   = false;
+    return m_stopTime - m_startTime;
+}
+
+//-----------------------------------------------------------------------------
+
+double Timer::getElapsed() const
+{
+    if ( m_running )
+        return getClock() - m_startTime;
+    else
+        return m_stopTime - m_startTime;
+}
+
+//-----------------------------------------------------------------------------
+
+bool Timer::isRunning() const
+{
+    return m_running;
+}
+
+//-----------------------------------------------------------------------------
+

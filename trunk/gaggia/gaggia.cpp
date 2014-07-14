@@ -35,6 +35,11 @@ bool g_halt = false;        ///< Should we halt? (shutdown the system)
 
 double g_shotSize = 60.0;   ///< Shot size in ml
 
+/// Automatic power off time in seconds. Zero disables the time out.
+double g_autoPowerOff = 0.0;
+
+Timer g_lastUsed;           ///< When was the last use? (user interaction)
+
 Pump      g_pump;           ///< Pump controller
 Flow      g_flow;           ///< Flow sensor
 Inputs    g_inputs;         ///< Inputs (buttons)
@@ -65,6 +70,9 @@ void buttonHandler(
     bool state,     // pressed (true) or released (false)
     double time     // time period since last state change
 ) {
+    // reset the timer whenever the user interacts with the machine
+    g_lastUsed.reset();
+
     switch ( button ) {
     case 1:
         if ( state ) {
@@ -222,6 +230,10 @@ int runController(
     // shot size in millilitres
     g_shotSize = config["shotSize"];
 
+    // read auto cut out time (the value in the file is in minutes,
+    // and we convert to seconds here)
+    g_autoPowerOff = config["autoPowerOff"] * 60.0;
+
 	// read PID controller parameters from configuration
 	// these are the proportional, integral, derivate coefficients and
 	// the integrator limits
@@ -315,6 +327,24 @@ int runController(
 
 		// update water level display
 		display.updateLevel( level );
+
+        // if auto cut out is enabled (greater than one second) and if too
+        // much time has elapsed since the last user interaction, and the
+        // timer is running, turn off the boiler as a precaution
+        if (
+            (g_autoPowerOff > 1.0) &&
+            g_lastUsed.isRunning() &&
+            (g_lastUsed.getElapsed() > g_autoPowerOff)
+        ) {
+            // switch off the boiler
+            g_regulator.setPower( false );
+
+            // stop the timer to prevent repeat triggering
+            g_lastUsed.stop();
+
+            // explanatory message
+            cout << "gaggia: switched off power due to inactivity\n";
+        }
 
 		// sleep for remainder of time step
 		double remain = next - getClock();;

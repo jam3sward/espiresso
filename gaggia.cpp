@@ -120,6 +120,9 @@ void buttonHandler(
 
 /// Called when notifications are received from the flow sensor
 static void flowHandler( Flow::NotifyType type ) {
+    // reset the timer when the pump is used (e.g. via front panel switch)
+    g_lastUsed.reset();
+
 	switch ( type ) {
 	case Flow::Start :
 		cout << "flow: started\n";

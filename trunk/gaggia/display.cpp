@@ -174,10 +174,10 @@ void Display::render()
 
 	// draw water level bar
 	short maxWidth = 300;
-	short width	 = static_cast<short>(
+	Uint16 width = static_cast<Uint16>(
 		level * static_cast<double>(maxWidth) + 0.5
 	);
-	short height = 10;
+	Uint16 height = 10;
 	short left	 = 10;
 	short top	 = 240 - height - 10;
 	SDL_Rect rect = { left, top, width, height };

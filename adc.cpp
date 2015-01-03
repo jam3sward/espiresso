@@ -41,6 +41,9 @@ bool ADC::open( const std::string & device, unsigned address )
 
 double ADC::getVoltage( unsigned channel )
 {
+    // check that the device is open
+    if ( m_file < 0 ) return false;
+
     const uint16_t CFG_COMP_QUE_AFTER1  = 0x00;     // Fire after 1 conversion
     const uint16_t CFG_COMP_QUE_AFTER2  = 0x01;     // Fire after 2 conversions
     const uint16_t CFG_COMP_QUE_AFTER4  = 0x02;     // Fire after 4 conversions

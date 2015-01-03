@@ -5,15 +5,16 @@
 
 #include <thread>
 #include <mutex>
-#include "gpiopin.h"
+#include "adc.h"
 
 //-----------------------------------------------------------------------------
 
 /// Represents the inputs
 class Inputs {
 public:
-	/// Default constructor
-	Inputs();
+	/// Default constructor: requires access to ADC to read button states,
+    /// and the ADC channel number to use
+	Inputs( ADC & adc, unsigned channel );
 
 	/// Destructor
 	virtual ~Inputs();
@@ -36,10 +37,15 @@ private:
     /// Worker thread
     void worker();
 
+    /// Convert ADC voltage to button state
+    unsigned getNearestButtonState( double voltage ) const;
+
 private:
-	GPIOPin	m_button1;	///< GPIO pin for button 1
-	GPIOPin m_button2;	///< GPIO pin for button 2
-    bool    m_run;      ///< Should thread continue to run?
+    ADC    & m_adc;     ///< Reference to the ADC
+    unsigned m_channel; ///< ADC channel number
+    bool     m_run;     ///< Should thread continue to run?
+
+    unsigned m_buttonState;     ///< Last button state
 
     NotifyFunc m_notifyFunc;    ///< Notification function
 

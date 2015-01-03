@@ -17,6 +17,8 @@
 #include "inputs.h"
 #include "system.h"
 #include "display.h"
+#include "adc.h"
+#include "settings.h"
 
 using namespace std;
 
@@ -40,10 +42,13 @@ double g_autoPowerOff = 0.0;
 
 Timer g_lastUsed;           ///< When was the last use? (user interaction)
 
+ADC       g_adc;            ///< ADC (used by multiple devices)
 Pump      g_pump;           ///< Pump controller
 Flow      g_flow;           ///< Flow sensor
-Inputs    g_inputs;         ///< Inputs (buttons)
 Regulator g_regulator;      ///< Temperature regulator
+
+/// Inputs (buttons) which use one of the ADC channels
+Inputs    g_inputs( g_adc, ADC_BUTTON_CHANNEL );
 
 //-----------------------------------------------------------------------------
 
@@ -74,7 +79,7 @@ void buttonHandler(
     g_lastUsed.reset();
 
     switch ( button ) {
-    case 1:
+    case BUTTON1:
         if ( state ) {
             // button 1 pushed
 
@@ -89,12 +94,17 @@ void buttonHandler(
                 // pump is already running: turn it off
                 g_pump.setState( false );
             }
+
+            // display pump status for diagnostic purposes
+            cout << "gaggia: pump "
+                 << (g_pump.getState() ? "enabled" : "disabled")
+                 << endl;
         } else {
             // button 1 released
         }
         break;
 
-    case 2:
+    case BUTTON2:
         if ( state ) {
             // button 2 pushed
         } else {
@@ -511,6 +521,13 @@ int main( int argc, char **argv )
 		} else
 			cerr << "gaggia: unexpected option\n";
 	}
+
+    // initialise ADC
+    if ( !g_adc.open( I2C_DEVICE_PATH, ADS1015_ADC_I2C_ADDRESS ) ) {
+        // may as well give up if this fails
+        cerr << "gaggia: failed to open ADC\n";
+        return 1;
+    }
 
 	if ( command == "stop" ) {
 		Boiler boiler;

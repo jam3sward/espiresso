@@ -1,14 +1,17 @@
 #include <array>
 #include <future>
+#include <assert.h>
+#include <math.h>
 #include "inputs.h"
 #include "settings.h"
 #include "timing.h"
 
 //-----------------------------------------------------------------------------
 
-Inputs::Inputs() :
-	m_button1( BUTTON1_PIN ),
-	m_button2( BUTTON2_PIN ),
+Inputs::Inputs( ADC & adc, unsigned channel ) :
+    m_adc( adc ),
+    m_channel( channel ),
+    m_buttonState( 0 ),
     m_notifyFunc( nullptr ),
     m_run( true ),
     m_thread( &Inputs::worker, this )
@@ -30,11 +33,8 @@ Inputs::~Inputs()
 
 bool Inputs::getButton( int button ) const
 {
-	switch ( button ) {
-	case 1: return !m_button1.getState(); break;
-	case 2: return !m_button2.getState(); break;
-	}
-	return false;
+    std::lock_guard<std::mutex> lock( m_mutex );
+    return ( (m_buttonState & (1 << button)) != 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -63,12 +63,8 @@ Inputs & Inputs::notifyCancel()
 
 void Inputs::worker()
 {
-    // set up the button inputs
-    m_button1.setOutput( false );
-    m_button2.setOutput( false );
-
-    // time period for polling
-    const unsigned period = 10;
+    // minimum time period for polling (milliseconds)
+    const unsigned period = 50;
 
     struct State {
         bool state;
@@ -77,7 +73,7 @@ void Inputs::worker()
     };
 
     // button states
-    std::array<State,2> button;
+    std::array<State,3> button;
     for (size_t i=0; i<button.size(); ++i) {
         button[i].oldState = false;
         button[i].timeStamp = getClock();
@@ -85,9 +81,24 @@ void Inputs::worker()
 
     // poll the buttons
     while (m_run) {
-        // sample the button state (active low: 0=down, 1=up)
-        button[0].state = !m_button1.getState();
-        button[1].state = !m_button2.getState();
+        // sample the ADC voltage
+        double voltage = m_adc.getVoltage( m_channel );
+
+        // find the nearest matching button state for the ADC voltage
+        // this is effectively a bit-mask, with one bit per button
+        // (zero indicates that no buttons are pushed)
+        unsigned buttonState = getNearestButtonState( voltage );
+
+        // store the latest button state bit-mask
+        {
+            std::lock_guard<std::mutex> lock( m_mutex );
+            m_buttonState = buttonState;
+        }
+
+        // check the individual button states by testing bits within
+        // the state bit-mask returned by getNearestButtonState
+        for (size_t i=0; i<button.size(); ++i)
+            button[i].state = ((buttonState & (1<<i)) != 0);
 
         // for each button
         for (size_t i=0; i<button.size(); ++i) {
@@ -119,5 +130,59 @@ void Inputs::worker()
         delayms( period );
     }
 }//worker
+
+//-----------------------------------------------------------------------------
+
+/// Returns the index of the closest matching button state for a given
+/// ADC voltage. Individual bits of this integer index can then be
+/// tested to determine the state of each button.
+unsigned Inputs::getNearestButtonState( double voltage ) const
+{
+    // lookup table to convert voltages into key states
+    static const std::array<double,8> lookup{
+        3.30754,    // measured
+        2.65300,    // predicted. todo: update this value
+        2.19561,    // measured
+        1.87800,    // predicted. todo: update this value
+        1.66669,    // measured
+        1.47100,    // predicted. todo: update this value
+        1.33261,    // measured
+        1.19700     // predicted. todo: update this value
+    };
+
+    // minimum error so far (use large initial value)
+    double minError = lookup[0];
+
+    // minimum difference between two successive values in the table
+    // (this assumes decreasing voltage, and uses the last two values)
+    assert( lookup.size() >= 2 );
+    static const double minGap = fabs(
+        lookup[ lookup.size()-2 ] - lookup[ lookup.size()-1 ]
+    );
+
+    // the accepted tolerance when matching values
+    static const double tolerance = minGap / 2.0;
+
+    // closest index so far
+    unsigned closest = 0;
+
+    // calculate distance from each entry in lookup table
+    for (unsigned i=0; i<lookup.size(); ++i) {
+        double error = fabs( lookup[i] - voltage );
+        if ( error < minError ) {
+            closest  = i;
+            minError = error;
+        }
+    }
+
+    // is it within tolerance?
+    if ( minError <= tolerance ) {
+        // yes: return the closest matching value
+        return closest;
+    } else {
+        // no: return zero
+        return 0;
+    }
+}//getNearestButtonState
 
 //-----------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 
 #include <string>
+#include "tsic.h"
 
 //-----------------------------------------------------------------------------
 
@@ -14,15 +15,14 @@ public:
 	/// Default constructor
 	Temperature();
 
+    /// Destructor
+    virtual ~Temperature();
+
 	/// Read the temperature in degrees C
-	bool getDegrees( double *value ) const;
+	bool getDegrees( double & value ) const;
 
 private:
-	/// Find the sensor path
-	static std::string findSensorPath();
-
-private:
-	std::string m_sensorPath;	///< Path to sensor on file system
+    TSIC m_tsic;    ///< Associated temperature sensor
 };
 
 //-----------------------------------------------------------------------------

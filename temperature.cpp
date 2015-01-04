@@ -1,43 +1,25 @@
 #include "temperature.h"
-#include <stdlib.h>
-#include <string>
-#include <fstream>
-#include <iostream>
-using namespace std;
+#include "settings.h"
 
 //-----------------------------------------------------------------------------
 
 Temperature::Temperature()
 {
-	// attempt to find the sensor path on the filesystem
-	m_sensorPath = findSensorPath();
+    m_tsic.open( TSIC_PIN );
 }
 
 //-----------------------------------------------------------------------------
 
-bool Temperature::getDegrees( double *value ) const
+Temperature::~Temperature()
 {
-    // attempt to open the sensor
-    ifstream sensor( m_sensorPath.c_str() );
-
-    // read the first line
-    string line;
-    getline( sensor, line );
-
-    // convert to degrees
-    double degrees = static_cast<double>( atoi(line.c_str()) ) / 1000.0;
-
-	if ( value != 0 ) *value = degrees;
-
-	return true;
+    m_tsic.close();
 }
 
 //-----------------------------------------------------------------------------
 
-std::string Temperature::findSensorPath()
+bool Temperature::getDegrees( double & value ) const
 {
-    /* Now we use the TSIC 306, the sensor path is fixed (currently) */
-	return "/sys/kernel/tsic/temp";
+    return m_tsic.getDegrees( value );
 }
 
 //-----------------------------------------------------------------------------

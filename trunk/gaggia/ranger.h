@@ -5,6 +5,7 @@
 
 #include <thread>
 #include <mutex>
+#include "hcsr04.h"
 
 //-----------------------------------------------------------------------------
 
@@ -43,6 +44,8 @@ private:
 	unsigned m_count;		///< Number of range measurements so far
 
 	bool	m_run;			///< Should thread continue to run?
+
+    HCSR04  m_hcsr;         ///< The range finder device
 
 	/// Thread used to take range measurements
 	std::thread m_thread;

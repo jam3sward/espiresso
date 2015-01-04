@@ -1,9 +1,7 @@
 #include "ranger.h"
 #include <math.h>
-#include <fstream>
 #include "settings.h"
 #include "timing.h"
-using namespace std;
 
 //-----------------------------------------------------------------------------
 
@@ -78,6 +76,12 @@ void Ranger::worker()
 	double oldRange = 0.0;
 	bool firstTime = true;
 
+    // attempt to open the range finder
+    if ( !m_hcsr.open( RANGER_TRIGGER_OUT, RANGER_ECHO_IN ) ) {
+        // failed to open
+        return;
+    }
+
 	while (m_run) {
 		oldRange = range;
 
@@ -109,7 +113,10 @@ void Ranger::worker()
 			m_count++;
 		}
 	}
-}
+
+    // close the range finder
+    m_hcsr.close();
+}//worker
 
 //-----------------------------------------------------------------------------
 
@@ -133,18 +140,13 @@ double Ranger::measureRange()
     // remember time of last run
     m_timeLastRun = getClock();
 
-    // open the range finder via the hcsr04 kernel module
-    ifstream in( "/sys/kernel/hcsr04/range" );
-    // read the first value from the file (range in mm)
-    long value = 0;
-    in >> value;
-    // basic check for valid response
-    response = in.good() && (value != 0);
-    // close the file
-    in.close();
+    // attempt to get the range
+    long us = 0;
+    long mm = 0;
+    response = m_hcsr.getRange( us, mm ) && (mm != 0);
 
     // convert range to m
-    double distance = static_cast<double>(value) / 1000.0;
+    double distance = static_cast<double>(mm) / 1000.0;
 
     // return distance (or zero if echo not received)
     if ( response )

@@ -3,9 +3,6 @@
 
 //-----------------------------------------------------------------------------
 
-// GPIO pin used for DS18B20
-#define DSPIN 4
-
 // GPIO pin used for Solid State Relay
 // NOTE: this is now using hardware PWM
 #define SSRPIN 18
@@ -20,6 +17,9 @@
 #define RANGER_TRIGGER_OUT 23
 #define RANGER_ECHO_IN 22
 
+// GPIO pin used by the TSIC 306 temperature sensor
+#define TSIC_PIN 24
+
 // I2C directory path
 #define I2C_DEVICE_PATH "/dev/i2c-1"
 
@@ -31,11 +31,10 @@
 
 // Maps logical button number to physical button number
 // Where BUTTON1 is the top button on the panel, and the defined values
-// correspond to the button num
+// correspond to the button numbers from the ADC
 #define BUTTON1 3
 #define BUTTON2 2
 
 //-----------------------------------------------------------------------------
 
 #endif//__settings_h
-

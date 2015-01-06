@@ -86,6 +86,18 @@ public:
 
         m_regulator = std::make_shared<Regulator>( m_temperature );
         m_inputs = std::make_shared<Inputs>( m_adc, ADC_BUTTON_CHANNEL );
+
+        using namespace std::placeholders;
+
+        // register button handler
+        inputs().notifyRegister(
+            std::bind( &Hardware::buttonHandler, this, _1, _2, _3 )
+        );
+
+        // register flow notification handler
+        flow().notifyRegister(
+            std::bind( &Hardware::flowHandler, this, _1 )
+        );
     }
 
     /// Destructor
@@ -561,10 +573,6 @@ int main( int argc, char **argv )
 		cerr << "gaggia: failed to hook SIGTERM\n";
 		return 1;
 	}
-
-    // register notification handlers
-//    g_inputs.notifyRegister( &buttonHandler );
-//    g_flow.notifyRegister( &flowHandler );
 
 	if ( argc < 2 ) {
 		cerr << "gaggia: expected a command\n";

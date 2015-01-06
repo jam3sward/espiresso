@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <memory>
 
 #include "timing.h"
 #include "regulator.h"
@@ -19,6 +20,7 @@
 #include "display.h"
 #include "adc.h"
 #include "settings.h"
+#include "pigpiomgr.h"
 
 using namespace std;
 
@@ -40,15 +42,77 @@ double g_shotSize = 60.0;   ///< Shot size in ml
 /// Automatic power off time in seconds. Zero disables the time out.
 double g_autoPowerOff = 0.0;
 
-Timer g_lastUsed;           ///< When was the last use? (user interaction)
+class Hardware {
+private:
+    Timer       m_lastUsed;     ///< When was the last user interaction?
+    ADC         m_adc;          ///< ADC used for buttons and pressure sensor
+    Pump        m_pump;         ///< Pump controller
+    Flow        m_flow;         ///< Flow sensor to measure volume dispensed
+    Temperature m_temperature;  ///< Boiler temperature sensor
+    Ranger      m_ranger;       ///< Range finder to measure water level
+    Display     m_display;      ///< LCD display screen
+    System      m_system;       ///< System information
 
-ADC       g_adc;            ///< ADC (used by multiple devices)
-Pump      g_pump;           ///< Pump controller
-Flow      g_flow;           ///< Flow sensor
-Regulator g_regulator;      ///< Temperature regulator
+    std::shared_ptr<Regulator> m_regulator;
 
-/// Inputs (buttons) which use one of the ADC channels
-Inputs    g_inputs( g_adc, ADC_BUTTON_CHANNEL );
+    std::shared_ptr<Inputs> m_inputs;
+
+public:
+    Timer & lastUsed() { return m_lastUsed; }
+
+    ADC & adc() { return m_adc; }
+
+    Pump & pump() { return m_pump; }
+
+    Flow & flow() { return m_flow; }
+
+    Temperature & temperature() { return m_temperature; }
+
+    Ranger & ranger() { return m_ranger; }
+
+    Display & display() { return m_display; }
+
+    System & system() { return m_system; }
+
+    Regulator & regulator() { return *m_regulator; }
+
+    Inputs & inputs() { return *m_inputs; }
+
+    /// Constructor
+    Hardware() {
+        // initialise ADC
+        if ( !m_adc.open( I2C_DEVICE_PATH, ADS1015_ADC_I2C_ADDRESS ) )
+            cerr << "gaggia: failed to open ADC\n";
+
+        m_regulator = std::make_shared<Regulator>( m_temperature );
+        m_inputs = std::make_shared<Inputs>( m_adc, ADC_BUTTON_CHANNEL );
+    }
+
+    /// Destructor
+    virtual ~Hardware() {
+        m_inputs.reset();
+        m_regulator.reset();
+    }
+
+    /// Called when buttons are pressed or released
+    void buttonHandler(
+        int button,     // button number (1,2)
+        bool state,     // pressed (true) or released (false)
+        double time     // time period since last state change
+    );
+
+    /// Called when notifications are received from the flow sensor
+    void flowHandler( Flow::NotifyType type );
+
+    /// Run the control loop
+    int runController(
+	    bool interactive,
+	    const std::string & fileName
+    );
+
+    /// Run test mode
+    int runTests();
+};
 
 //-----------------------------------------------------------------------------
 
@@ -70,13 +134,13 @@ void signalHandler( int signal )
 //-----------------------------------------------------------------------------
 
 /// Called when buttons are pressed or released
-void buttonHandler(
+void Hardware::buttonHandler(
     int button,     // button number (1,2)
     bool state,     // pressed (true) or released (false)
     double time     // time period since last state change
 ) {
     // reset the timer whenever the user interacts with the machine
-    g_lastUsed.reset();
+    lastUsed().reset();
 
     switch ( button ) {
     case BUTTON1:
@@ -84,20 +148,20 @@ void buttonHandler(
             // button 1 pushed
 
             // if the pump is idle
-            if ( !g_pump.getState() ) {
+            if ( !pump().getState() ) {
                 // ask the flow sensor to notify us after a shot
                 // has been dispensed
-                g_flow.notifyAfter( g_shotSize / 1000.0 );
+                flow().notifyAfter( g_shotSize / 1000.0 );
                 // turn on the pump
-                g_pump.setState( true );
+                pump().setState( true );
             } else {
                 // pump is already running: turn it off
-                g_pump.setState( false );
+                pump().setState( false );
             }
 
             // display pump status for diagnostic purposes
             cout << "gaggia: pump "
-                 << (g_pump.getState() ? "enabled" : "disabled")
+                 << (pump().getState() ? "enabled" : "disabled")
                  << endl;
         } else {
             // button 1 released
@@ -116,9 +180,9 @@ void buttonHandler(
                 g_quit = true;
             } else {
                 // button was pushed briefly, toggle boiler power
-                g_regulator.setPower( !g_regulator.getPower() );
+                regulator().setPower( !regulator().getPower() );
                 cout << "gaggia: boiler "
-                     << (g_regulator.getPower() ? "enabled" : "disabled")
+                     << (regulator().getPower() ? "enabled" : "disabled")
                      << endl;
             }
         }
@@ -129,9 +193,9 @@ void buttonHandler(
 //-----------------------------------------------------------------------------
 
 /// Called when notifications are received from the flow sensor
-static void flowHandler( Flow::NotifyType type ) {
+void Hardware::flowHandler( Flow::NotifyType type ) {
     // reset the timer when the pump is used (e.g. via front panel switch)
-    g_lastUsed.reset();
+    lastUsed().reset();
 
 	switch ( type ) {
 	case Flow::Start :
@@ -145,7 +209,7 @@ static void flowHandler( Flow::NotifyType type ) {
 	case Flow::Target:
 		cout << "flow: target reached\n";
         // stop the pump
-        g_pump.setState( false );
+        pump().setState( false );
 		break;
 	}
 }
@@ -207,18 +271,15 @@ std::string makeLogFileName()
 
 //-----------------------------------------------------------------------------
 
-int runController(
+int Hardware::runController(
 	bool interactive,
 	const std::string & fileName
 ) {
     // if button 2 is pushed during initialisation, abort
-    if ( g_inputs.getButton(2) ) {
+    if ( inputs().getButton(2) ) {
         cerr << "gaggia: button 2 is down: aborting" << endl;
         return 1;
     }
-
-	Display display;
-	Ranger ranger;
 
 	// open log file
 	ofstream out( fileName.c_str() );
@@ -228,7 +289,7 @@ int runController(
 	}
 
 	// check that flow meter is available
-	if ( !g_flow.ready() ) {
+	if ( !flow().ready() ) {
 		out << "error: flow meter not ready\n";
 		return 1;
 	}
@@ -257,16 +318,16 @@ int runController(
 	const double kMax = config["iMax"];
 
 	// set the PID controller parameters
-	g_regulator.setPIDGains( kP, kI, kD );
-	g_regulator.setIntegratorLimits( kMin, kMax );
+	regulator().setPIDGains( kP, kI, kD );
+	regulator().setIntegratorLimits( kMin, kMax );
 
 	// target temperature in degrees centigrade
 	double targetTemp = config["targetTemp"];
-	g_regulator.setTargetTemperature( targetTemp );
+	regulator().setTargetTemperature( targetTemp );
 
 	// time step in seconds
 	double timeStep = config["timeStep"];
-	g_regulator.setTimeStep( timeStep );
+	regulator().setTimeStep( timeStep );
 
 	// output parameters to log
 	char buffer[512];
@@ -290,7 +351,7 @@ int runController(
 	double next  = start;
 
 	// turn on the power and start the regulator (boiler will begin to heat)
-	g_regulator.setPower( g_enableBoiler ).start();
+	regulator().setPower( g_enableBoiler ).start();
 
 	do {
 		// next time step
@@ -306,13 +367,13 @@ int runController(
 		double elapsed = getClock() - start;
 
 		// get the latest temperature reading
-		double latestTemp = g_regulator.getTemperature();
+		double latestTemp = regulator().getTemperature();
 
 		// get the latest boiler power level
-		double powerLevel = g_regulator.getPowerLevel();
+		double powerLevel = regulator().getPowerLevel();
 
 		// number of millilitres of water drawn up by the pump
-		double ml = 1000.0 * g_flow.getLitres();
+		double ml = 1000.0 * flow().getLitres();
 
 		// dump values to log file
 		sprintf(
@@ -327,10 +388,10 @@ int runController(
 		}
 
 		// update temperature display
-		display.updateTemperature( latestTemp );
+		display().updateTemperature( latestTemp );
 
         // range measurement (convert to mm)
-        double range = 1000.0 * ranger.getRange();
+        double range = 1000.0 * ranger().getRange();
 
 		// simplistic conversion to water level
 		double minDist = 20.0;
@@ -339,21 +400,21 @@ int runController(
 		double level = 1.0 - (range - minDist) / (maxDist - minDist);
 
 		// update water level display
-		display.updateLevel( level );
+		display().updateLevel( level );
 
         // if auto cut out is enabled (greater than one second) and if too
         // much time has elapsed since the last user interaction, and the
         // timer is running, turn off the boiler as a precaution
         if (
             (g_autoPowerOff > 1.0) &&
-            g_lastUsed.isRunning() &&
-            (g_lastUsed.getElapsed() > g_autoPowerOff)
+            lastUsed().isRunning() &&
+            (lastUsed().getElapsed() > g_autoPowerOff)
         ) {
             // switch off the boiler
-            g_regulator.setPower( false );
+            regulator().setPower( false );
 
             // stop the timer to prevent repeat triggering
-            g_lastUsed.stop();
+            lastUsed().stop();
 
             // explanatory message
             cout << "gaggia: switched off power due to inactivity\n";
@@ -369,11 +430,11 @@ int runController(
 		nonblock(0);
 
 	// turn the boiler off before we exit
-	g_regulator.setPower( false );
+	regulator().setPower( false );
 
 	// if the halt button was pushed, halt the system
 	if ( g_halt ) {
-		system( "halt" );
+		::system( "halt" );
 	}
 
   	return 0;
@@ -381,26 +442,22 @@ int runController(
 
 //-----------------------------------------------------------------------------
 
-int runTests()
+int Hardware::runTests()
 {
-    Temperature temperature;
-    Ranger ranger;
-    System system;
-	Display display;
-
     cout << "flow: " <<
-        (g_flow.ready() ? "ready" : "not ready")
+        (flow().ready() ? "ready" : "not ready")
         << endl;
 
+    double degrees = 0.0;
     cout << "temp: " <<
-        (temperature.getDegrees(0) ? "ready" : "not ready")
+        ( temperature().getDegrees(degrees) ? "ready" : "not ready")
         << endl;
 
 	cout << "range: " <<
-		(ranger.initialise() ? "ready" : "not ready")
+		( ranger().initialise() ? "ready" : "not ready" )
 		<< endl;
 
-	g_flow.notifyAfter( g_shotSize / 1000.0 );
+	flow().notifyAfter( g_shotSize / 1000.0 );
 
     nonblock(1);
 
@@ -425,11 +482,11 @@ int runTests()
 			bool stop = false;
 			switch ( tolower(key) ) {
 			case 'p':
-                if ( !g_pump.getState() ) {
-                    g_flow.notifyAfter( 60.0 / 1000.0 );
+                if ( !pump().getState() ) {
+                    flow().notifyAfter( 60.0 / 1000.0 );
                 }
-				g_pump.setState( !g_pump.getState() );
-				cout << "pump: " << (g_pump.getState() ? "on" : "off") << endl;
+				pump().setState( !pump().getState() );
+				cout << "pump: " << (pump().getState() ? "on" : "off") << endl;
 				break;
 
             case 'r':
@@ -437,8 +494,9 @@ int runTests()
                     double range = 0.0;
                     const int count = 50;
                     for (int i=0; i<count; ++i)
-                        range += ranger.getRange() * 1000.0;
-                    cout << "range average: " << range / static_cast<double>(count) << endl;
+                        range += ranger().getRange() * 1000.0;
+                    cout << "range average: "
+                         << range / static_cast<double>(count) << endl;
                 }
                 break;
 
@@ -451,16 +509,16 @@ int runTests()
 
         // read temperature sensor
         double temp = 0.0;
-        temperature.getDegrees( &temp );
+        temperature().getDegrees( temp );
 
         // read core temperature
-        double coreTemp = system.getCoreTemperature();
+        double coreTemp = system().getCoreTemperature();
 
         // number of millilitres of water drawn up by the pump
-        double ml = 1000.0 * g_flow.getLitres();
+        double ml = 1000.0 * flow().getLitres();
 
         // range measurement (convert to mm)
-        double range = 1000.0 * ranger.getRange();
+        double range = 1000.0 * ranger().getRange();
 
         // print sensor values
         printf(
@@ -469,7 +527,7 @@ int runTests()
 		);
 
 		// update temperature on display
-		display.updateTemperature( temp );
+		display().updateTemperature( temp );
 
 		// sleep for remainder of time step
 		double remain = next - getClock();;
@@ -486,6 +544,12 @@ int runTests()
 
 int main( int argc, char **argv )
 {
+    // check that PIGPIO is initialised
+    if ( !PIGPIOManager::get().ready() ) {
+        cerr << "gaggia: failed to initialise PIGPIO\n";
+        return 1;
+    }
+
 	// hook SIGINT so we can exit gracefully
 	if ( signal(SIGINT, signalHandler) == SIG_ERR ) {
 		cerr << "gaggia: failed to hook SIGINT\n";
@@ -499,8 +563,8 @@ int main( int argc, char **argv )
 	}
 
     // register notification handlers
-    g_inputs.notifyRegister( &buttonHandler );
-    g_flow.notifyRegister( &flowHandler );
+//    g_inputs.notifyRegister( &buttonHandler );
+//    g_flow.notifyRegister( &flowHandler );
 
 	if ( argc < 2 ) {
 		cerr << "gaggia: expected a command\n";
@@ -522,13 +586,6 @@ int main( int argc, char **argv )
 			cerr << "gaggia: unexpected option\n";
 	}
 
-    // initialise ADC
-    if ( !g_adc.open( I2C_DEVICE_PATH, ADS1015_ADC_I2C_ADDRESS ) ) {
-        // may as well give up if this fails
-        cerr << "gaggia: failed to open ADC\n";
-        return 1;
-    }
-
 	if ( command == "stop" ) {
 		Boiler boiler;
 		boiler.powerOff();
@@ -537,10 +594,10 @@ int main( int argc, char **argv )
 	} else if ( command == "start" ) {
 		string fileName( makeLogFileName() );
 		cout << "gaggia: starting controller (log=" << fileName << ")\n";
-		return runController( interactive, filePath + fileName );
+		return Hardware().runController( interactive, filePath + fileName );
 	} else if ( command == "test" ) {
 		cout << "gaggia: test mode\n";
-		return runTests();
+		return Hardware().runTests();
 	} else {
 		cerr << "gaggia: unrecognised command (" << command << ")\n";
 		return 1;

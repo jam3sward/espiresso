@@ -62,6 +62,9 @@ private:
 	/// Worker thread
 	void worker();
 
+    /// Pulse counter
+    void counter( unsigned pin, bool level, unsigned tick );
+
 private:
 	GPIOPin  m_flowPin;	///< Pin used to read the flow sensor
 	unsigned m_count;	///< Current counter value

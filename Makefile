@@ -1,16 +1,18 @@
 gaggia: gaggia.cpp settings.h \
 	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o \
-	gpiopin.o ranger.o flow.o system.o pump.o display.o regulator.o adc.o
+	gpiopin.o ranger.o flow.o system.o pump.o display.o regulator.o adc.o tsic.o \
+	pigpiomgr.o hcsr04.o
 	g++ -o gaggia gaggia.cpp \
 	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o \
-	gpiopin.o ranger.o flow.o system.o pump.o display.o regulator.o adc.o \
-	-lrt -lpthread -std=c++0x -lSDL -lSDLmain -lSDL_ttf
+	gpiopin.o ranger.o flow.o system.o pump.o display.o regulator.o adc.o tsic.o \
+	pigpiomgr.o hcsr04.o \
+	-lrt -lpthread -std=c++0x -lSDL -lSDLmain -lSDL_ttf -lpigpiod_if
 
 pwm.o: pwm.h pwm.cpp settings.h
 	g++ -c pwm.cpp
 
-temperature.o: temperature.h temperature.cpp settings.h
-	g++ -c temperature.cpp
+temperature.o: temperature.h temperature.cpp tsic.h tsic.o settings.h
+	g++ -c temperature.cpp -std=c++0x
 
 timing.o: timing.h timing.cpp
 	g++ -c timing.cpp
@@ -31,10 +33,13 @@ inputs.o: inputs.h inputs.cpp
 	g++ -c inputs.cpp -std=c++0x
 
 gpiopin.o: gpiopin.h gpiopin.cpp
-	g++ -c gpiopin.cpp
+	g++ -c gpiopin.cpp -std=c++0x
 
 ranger.o: ranger.h ranger.cpp settings.h
 	g++ -c ranger.cpp -std=c++0x
+
+hcsr04.o: hcsr04.h hcsr04.cpp settings.h
+	g++ -c hcsr04.cpp -std=c++0x
 
 flow.o: flow.h flow.cpp settings.h
 	g++ -c flow.cpp -std=c++0x
@@ -53,3 +58,9 @@ regulator.o: regulator.h regulator.cpp
 
 adc.o: adc.h adc.cpp
 	g++ -c adc.cpp -std=c++0x
+
+tsic.o: tsic.h tsic.cpp pigpiomgr.h
+	g++ -c tsic.cpp -std=c++0x
+
+pigpiomgr.o: pigpiomgr.h pigpiomgr.cpp
+	g++ -c pigpiomgr.cpp

@@ -1,21 +1,19 @@
 #include "gpiopin.h"
-#include <fstream>
-#include <sstream>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <poll.h>
 #include "timing.h"
+#include "pigpiomgr.h"
 
 using namespace std;
 
 //-----------------------------------------------------------------------------
 
-GPIOPin::GPIOPin( int pin ) :
+GPIOPin::GPIOPin( unsigned pin ) :
 	m_pin( pin ),
-	m_file(-1)
+	m_open( false ),
+    m_edge( Rising ),
+    m_edgeFunc( nullptr ),
+    m_callback( -1 )
 {
-	if ( exportPin() ) open();
+    open();
 }
 
 //-----------------------------------------------------------------------------
@@ -23,21 +21,13 @@ GPIOPin::GPIOPin( int pin ) :
 GPIOPin::~GPIOPin()
 {
 	close();
-	unexportPin();
 }
 
 //-----------------------------------------------------------------------------
 
 GPIOPin & GPIOPin::setOutput( bool output )
 {
-	ofstream fp( (m_path + "direction").c_str() );
-	if ( !fp ) return *this;
-
-	if ( output )
-		fp << "out";
-	else
-		fp << "in";
-
+    if ( m_open ) set_mode( m_pin, output ? PI_OUTPUT : PI_INPUT );
 	return *this;
 }
 
@@ -45,26 +35,36 @@ GPIOPin & GPIOPin::setOutput( bool output )
 
 GPIOPin & GPIOPin::setState( bool state )
 {
-	if ( m_file < 0 ) return *this;
-
-	char buffer[] = "0\n";
-	if ( state ) buffer[0] = '1';
-	int result = write( m_file, &buffer, sizeof(buffer)-1 );
-
+    if ( m_open ) gpio_write( m_pin, state ? 1 : 0 );
 	return *this;
+}
+
+//-----------------------------------------------------------------------------
+
+GPIOPin & GPIOPin::setPWMDuty( double duty )
+{
+    if ( m_open )
+        set_PWM_dutycycle( m_pin, static_cast<unsigned>(duty * 255.0 + 0.5) );
+    return *this;
+}
+
+//-----------------------------------------------------------------------------
+
+GPIOPin & GPIOPin::setPWMFrequency( unsigned frequency )
+{
+    if ( m_open )
+        set_PWM_frequency( m_pin, frequency );
+    return *this;
 }
 
 //-----------------------------------------------------------------------------
 
 bool GPIOPin::getState() const
 {
-	if ( m_file < 0 ) return false;
-
-	lseek( m_file, 0, SEEK_SET );
-	char buffer[8] = {};
-	int result = read( m_file, &buffer, sizeof(buffer)-1 );
-
-	return ( result > 0 ) && ( buffer[0] == '1' );
+    if ( m_open )
+        return (gpio_read( m_pin ) != 0);
+    else
+        return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -91,102 +91,113 @@ GPIOPin & GPIOPin::msPulse( bool state, unsigned ms )
 
 GPIOPin & GPIOPin::setEdgeTrigger( GPIOPin::Edge edge )
 {
-	ofstream fp( (m_path + "edge").c_str() );
-	if ( !fp ) return *this;
-
-	switch ( edge ) {
-	case Falling:
-		fp << "falling";
-		break;
-
-	case Rising:
-		fp << "rising";
-		break;
-
-	case Both:
-		fp << "both";
-		break;
-
-	case None:
-	default:
-		fp << "none";
-	}
-
-	return *this;
+    if ( !m_open || m_edgeFunc ) return *this;
+    m_edge = edge;
+    return * this;
 }
+
+//-----------------------------------------------------------------------------
+
+GPIOPin & GPIOPin::edgeFuncRegister( EdgeFunc edgeFunc )
+{
+    // check that the device is open
+    if ( !m_open ) return *this;
+
+    // remove any existing function
+    edgeFuncCancel();
+
+    // local static function used to forward events to the parent class
+    struct local {
+        static void callback(
+            unsigned gpio,
+            unsigned level,
+            uint32_t tick,
+            void    *userData
+        ) {
+            GPIOPin *self = reinterpret_cast<GPIOPin*>(userData);
+            if ( self != 0 ) self->callback(
+                gpio,
+                (level != 0),
+                static_cast<unsigned>(tick)
+            );
+        }
+    };
+
+    // install the function
+    m_edgeFunc = edgeFunc;
+
+    // register a callback
+    unsigned edge = static_cast<unsigned>(m_edge);
+    m_callback = callback_ex( m_pin, edge, local::callback, this );
+
+    return *this;
+}//edgeFuncRegister
+
+//-----------------------------------------------------------------------------
+
+GPIOPin & GPIOPin::edgeFuncCancel()
+{
+    // cancel the pigpiod callback
+    if ( m_callback >= 0 ) {
+        callback_cancel( m_callback );
+        m_callback = -1;
+    }
+
+    // remove the user function
+    m_edgeFunc = nullptr;
+
+    return *this;
+}//edgeFuncCancel
 
 //-----------------------------------------------------------------------------
 
 bool GPIOPin::poll( unsigned timeout )
 {
-	getState();
+    // check that the device is open
+    if ( !m_open ) return false;
 
-	struct pollfd pfd = {};
-	pfd.fd 		= m_file;
-	pfd.events 	= POLLPRI;
+    // timeout in seconds
+    double seconds = static_cast<double>(timeout) / 1000.0;
 
-	int result = ::poll( &pfd, 1, timeout );
-
-	return (result > 0);
-}
-
-//-----------------------------------------------------------------------------
-
-bool GPIOPin::exportPin()
-{
-	ofstream fp( "/sys/class/gpio/export" );
-	if ( !fp ) return false;
-	fp << m_pin;
-	return !fp.fail();
-}
-
-//-----------------------------------------------------------------------------
-
-bool GPIOPin::unexportPin()
-{
-	ofstream fp( "/sys/class/gpio/unexport" );
-	if ( !fp ) return false;
-	fp << m_pin;
-	return !fp.fail();
-}
+    // wait for specified edge
+    unsigned edge = static_cast<unsigned>(m_edge);
+    return (wait_for_edge( m_pin, edge, seconds ) == 1);
+}//poll
 
 //-----------------------------------------------------------------------------
 
 bool GPIOPin::open()
 {
-	// initialise GPIO path string
-	{
-		stringstream ss;
-		ss << "/sys/class/gpio/gpio" << m_pin << '/';
-		m_path = ss.str();
-	}
-
-	// open GPIO X value "/sys/class/gpio/gpioX/value"
-	string filePath( m_path + "value" );
-	m_file = ::open( filePath.c_str(), O_RDWR );
-	if ( m_file < 0 ) {
-		// failed to open
-		return false;
-	}
-
-	return true;
+    m_open = PIGPIOManager::get().ready();
+    m_edge = Rising;
+    return m_open;
 }
 
 //-----------------------------------------------------------------------------
 
 void GPIOPin::close()
 {
-	if ( m_file >= 0 ) {
-		::close( m_file );
-		m_file = -1;
-	}
+    // close any callback function
+    edgeFuncCancel();
+
+    // always set back to an input when closed
+    setOutput( false );
+
+    m_open = false;
+}
+
+//-----------------------------------------------------------------------------
+
+void GPIOPin::callback( unsigned pin, bool level, unsigned tick)
+{
+    if ( m_edgeFunc ) m_edgeFunc( pin, level, tick );
 }
 
 //-----------------------------------------------------------------------------
 
 bool GPIOPin::ready() const
 {
-	return (m_file >= 0);
+    return m_open;
 }
 
 //-----------------------------------------------------------------------------

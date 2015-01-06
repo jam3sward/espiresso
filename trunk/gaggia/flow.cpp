@@ -42,10 +42,14 @@ void Flow::worker()
 {
 	// initialise GPIO pin as an input and enable interrupts on both
 	// rising and falling edges
-	m_flowPin.setOutput( false ).setEdgeTrigger( GPIOPin::Both );
+    using namespace std::placeholders;
+	m_flowPin
+        .setOutput( false )
+        .setEdgeTrigger( GPIOPin::Both )
+        .edgeFuncRegister( std::bind( &Flow::counter, this, _1, _2, _3 ) );
 
 	// timeout period for detecting pulses
-	const unsigned timeout = 1000;
+	const unsigned timeout = 10;
 	const unsigned idleTimeout = 1000;
 
 	// is liquid flowing?
@@ -58,8 +62,12 @@ void Flow::worker()
 	while (m_run) {
 		bool wasFlowing = flowing;
 
-		if ( m_flowPin.poll( timeout ) ) {
-			// received an interrupt
+        // we don't bother locking this, because we only care
+        // if the value has changed
+        unsigned oldCount = m_count;
+        usleep( timeout );
+        if ( m_count != oldCount ) {
+			// received one (or more) interrupts
 
 			// fluid is flowing
 			flowing = true;
@@ -80,9 +88,6 @@ void Flow::worker()
 			{
 				// lock the mutex
 				std::lock_guard<std::mutex> lock( m_mutex );
-
-				// increment our counter
-				++m_count;
 
 				// should we send a notification?
 				notify = (m_notifyCount > 0) && (m_count >= m_notifyCount);
@@ -127,7 +132,20 @@ void Flow::worker()
 			}
 		}
 	}
+
+    // remove the callback
+    m_flowPin.edgeFuncCancel();
 }//worker
+
+//-----------------------------------------------------------------------------
+
+void Flow::counter( unsigned pin, bool level, unsigned tick ) {
+	// lock the mutex
+	std::lock_guard<std::mutex> lock( m_mutex );
+
+    // increment counter
+    ++m_count;
+}//counter
 
 //-----------------------------------------------------------------------------
 

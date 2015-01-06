@@ -19,9 +19,9 @@ class Regulator :private PIDControl
 typedef PIDControl baseClass;
 
 public:
-	/// Default constructor. The boiler power is off by default, and must be
+	/// Constructor. The boiler power is off by default, and must be
 	/// switched on with setPower()
-	Regulator();
+	Regulator( const Temperature & temperature );
 
 	/// Destructor
 	virtual ~Regulator();
@@ -72,13 +72,15 @@ private:
 	/// Mutex to control access to shared data
 	mutable std::mutex m_mutex;
 
-	bool		m_power;		///< Power on/off
-	double		m_timeStep;		///< Time step in seconds
-	double		m_targetTemp;	///< Target temperature in degrees
-	double		m_latestTemp;	///< Latest temperature in degrees
-	double		m_latestPower;	///< Latest power level (0..1)
-	Temperature	m_temperature;	///< Temperature sensor
-	Boiler		m_boiler;		///< Boiler control
+	bool    m_power;	    ///< Power on/off
+	double	m_timeStep;		///< Time step in seconds
+	double	m_targetTemp;	///< Target temperature in degrees
+	double	m_latestTemp;	///< Latest temperature in degrees
+	double	m_latestPower;	///< Latest power level (0..1)
+	Boiler	m_boiler;		///< Boiler control
+
+    /// Temperature sensor
+	const Temperature & m_temperature;
 };
 
 //-----------------------------------------------------------------------------

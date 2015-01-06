@@ -3,14 +3,15 @@
 
 //-----------------------------------------------------------------------------
 
-Regulator::Regulator() :
-	m_run( true ),
+Regulator::Regulator( const Temperature & temperature ) :
+	m_run( false ),
 	m_power( false ),
 	m_timeStep( 1.0 ),
 	m_targetTemp( 95.0 ),
 	m_latestTemp( 20.0 ),
 	m_latestPower( 0.0 ),
-	m_thread( &Regulator::worker, this )
+    m_temperature( temperature )
+	//m_thread implicit
 {
 }
 
@@ -45,7 +46,8 @@ void Regulator::stop()
 	m_run = false;
 
 	// wait for the thread to terminate
-	m_thread.join();
+	if ( m_thread.joinable() )
+        m_thread.join();
 }
 
 //-----------------------------------------------------------------------------
@@ -129,9 +131,6 @@ bool Regulator::getPower() const
 
 void Regulator::worker()
 {
-	// initialise digital thermometer
-	m_temperature.getDegrees(0);	// todo: error handling
-
 	// start time and next time step
 	double start = getClock();
 	double next  = start;
@@ -143,7 +142,8 @@ void Regulator::worker()
 
 		// take temperature measurement
 		double latestTemp = 0.0;
-		m_temperature.getDegrees( &latestTemp );
+		if ( !m_temperature.getDegrees( latestTemp ) )
+            latestTemp = 0.0;
 
 		// boiler drive (duty cycle)
 		double drive = 0.0;

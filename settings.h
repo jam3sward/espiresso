@@ -29,6 +29,9 @@
 // ADC channel used by the button inputs
 #define ADC_BUTTON_CHANNEL 0
 
+// ADC channel used by the pressure sensor
+#define ADC_PRESSURE_CHANNEL 1
+
 // Maps logical button number to physical button number
 // Where BUTTON1 is the top button on the panel, and the defined values
 // correspond to the button numbers from the ADC

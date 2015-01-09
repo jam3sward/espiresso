@@ -19,6 +19,7 @@
 #include "system.h"
 #include "display.h"
 #include "adc.h"
+#include "pressure.h"
 #include "settings.h"
 #include "pigpiomgr.h"
 
@@ -57,6 +58,8 @@ private:
 
     std::shared_ptr<Inputs> m_inputs;
 
+    std::shared_ptr<Pressure> m_pressure;
+
 public:
     Timer & lastUsed() { return m_lastUsed; }
 
@@ -78,6 +81,8 @@ public:
 
     Inputs & inputs() { return *m_inputs; }
 
+    Pressure & pressure() { return *m_pressure; }
+
     /// Constructor
     Hardware() {
         // initialise ADC
@@ -86,6 +91,7 @@ public:
 
         m_regulator = std::make_shared<Regulator>( m_temperature );
         m_inputs = std::make_shared<Inputs>( m_adc, ADC_BUTTON_CHANNEL );
+        m_pressure = std::make_shared<Pressure>( m_adc, ADC_PRESSURE_CHANNEL );
 
         using namespace std::placeholders;
 
@@ -104,6 +110,7 @@ public:
     virtual ~Hardware() {
         m_inputs.reset();
         m_regulator.reset();
+        m_pressure.reset();
     }
 
     /// Called when buttons are pressed or released
@@ -532,10 +539,13 @@ int Hardware::runTests()
         // range measurement (convert to mm)
         double range = 1000.0 * ranger().getRange();
 
+        // pressure measurement
+        double bar = pressure().getBar();
+
         // print sensor values
         printf(
-			"%.2lfC %.2lfC %.1lfml %.0lfmm\n",
-			temp, coreTemp, ml, range
+			"%.2lfC %.2lfC %.1lfml %.0lfmm %.1lf\n",
+			temp, coreTemp, ml, range, bar
 		);
 
 		// update temperature on display

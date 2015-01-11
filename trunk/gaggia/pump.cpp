@@ -12,7 +12,7 @@ Pump::Pump() :
 	m_pump.setOutput( true ).setState( false );
 
     // Make the pin an output and set the PWM frequency and duty
-    m_pumpPWM.setOutput( true ).setPWMFrequency( 2000 ).setPWMDuty( 0.0 );
+    m_pumpPWM.setOutput( true ).setPWMFrequency( 2000 ).setPWMDuty( 1.0 );
 }
 
 //-----------------------------------------------------------------------------

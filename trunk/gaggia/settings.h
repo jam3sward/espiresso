@@ -38,6 +38,7 @@
 // correspond to the button numbers from the ADC
 #define BUTTON1 3
 #define BUTTON2 2
+#define BREW_SWITCH 1
 
 //-----------------------------------------------------------------------------
 

@@ -22,8 +22,12 @@ public:
 	/// Return current state (on/off)
 	bool getState() const;
 
+    /// Set PWM duty cycle (0..1)
+    bool setPWMDuty( double duty );
+
 private:
 	GPIOPin m_pump;		///< GPIO pin used to control the pump
+    GPIOPin m_pumpPWM;  ///< GPIO pin used for pump PWM
 	bool m_state;		///< Last state set
 };
 

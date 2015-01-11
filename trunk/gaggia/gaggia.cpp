@@ -161,6 +161,8 @@ void Hardware::buttonHandler(
     // reset the timer whenever the user interacts with the machine
     lastUsed().reset();
 
+    cout << "button(" << button << ',' << (state?1:0) << ")\n";
+
     switch ( button ) {
     case BUTTON1:
         if ( state ) {
@@ -504,6 +506,7 @@ int Hardware::runTests()
                 if ( !pump().getState() ) {
                     flow().notifyAfter( 60.0 / 1000.0 );
                 }
+                pump().setPWMDuty( 0.5 );
 				pump().setState( !pump().getState() );
 				cout << "pump: " << (pump().getState() ? "on" : "off") << endl;
 				break;

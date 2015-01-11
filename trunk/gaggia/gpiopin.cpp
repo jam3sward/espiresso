@@ -9,6 +9,8 @@ using namespace std;
 GPIOPin::GPIOPin( unsigned pin ) :
 	m_pin( pin ),
 	m_open( false ),
+    m_output( false ),
+    m_state( false ),
     m_edge( Rising ),
     m_edgeFunc( nullptr ),
     m_callback( -1 )
@@ -27,7 +29,21 @@ GPIOPin::~GPIOPin()
 
 GPIOPin & GPIOPin::setOutput( bool output )
 {
-    if ( m_open ) set_mode( m_pin, output ? PI_OUTPUT : PI_INPUT );
+    if ( m_open ) {
+        // set pin to input/output as appropriate
+        set_mode( m_pin, output ? PI_OUTPUT : PI_INPUT );
+
+        // read pin state: when the pin is set as an output, this may be
+        // unreliable, but decided it's better not to enforce the pin
+        // being low/high initially (should be sensibly initialised by the
+        // caller in any case)
+        m_state = getState();
+
+        // store input/output state
+        m_output = output;
+    } else {
+        m_output = false;
+    }
 	return *this;
 }
 
@@ -35,7 +51,10 @@ GPIOPin & GPIOPin::setOutput( bool output )
 
 GPIOPin & GPIOPin::setState( bool state )
 {
-    if ( m_open ) gpio_write( m_pin, state ? 1 : 0 );
+    if ( m_open ) {
+        gpio_write( m_pin, state ? 1 : 0 );
+        m_state = state;
+    }
 	return *this;
 }
 
@@ -61,9 +80,15 @@ GPIOPin & GPIOPin::setPWMFrequency( unsigned frequency )
 
 bool GPIOPin::getState() const
 {
-    if ( m_open )
-        return (gpio_read( m_pin ) != 0);
-    else
+    if ( m_open ) {
+        if ( m_output ) {
+            // pin is set as an output: return the last state set by caller
+            return m_state;
+        } else {
+            // pin is set as an input: read the actual pin state
+            return (gpio_read( m_pin ) != 0);
+        }
+    } else
         return false;
 }
 

@@ -42,6 +42,9 @@ bool ADC::open( const std::string & device, unsigned address )
 
 double ADC::getVoltage( unsigned channel )
 {
+    // lock the mutex
+    std::lock_guard<std::mutex> lock( m_mutex );
+
     // check that the device is open
     if ( m_file < 0 ) return false;
 
@@ -86,7 +89,7 @@ double ADC::getVoltage( unsigned channel )
           REG_CONFIG,
           CFG_COMP_QUE_DISABLE  // Disable comparator
         | CFG_MODE_SINGLE_SHOT  // Single-shot conversion mode
-        | CFG_DATA_RATE_1600    // Set data rate
+        | CFG_DATA_RATE_MAX     // Set data rate
         | CFG_PGA_FS_4_096      // 4.096V full scale
         | channelMap[channel]   // Select single ended input A0..A3
         | CFG_OS_BEGIN_CONV     // Begin conversion

@@ -78,6 +78,8 @@ private:
 private:
 	unsigned m_pin;         ///< GPIO pin number
     bool     m_open;        ///< Successfully opened
+    bool     m_output;      ///< Is the pin set as an output?
+    bool     m_state;       ///< In output mode, was the pin set high or low?
     Edge     m_edge;        ///< Edge trigger mode
 
     EdgeFunc m_edgeFunc;    ///< Edge function

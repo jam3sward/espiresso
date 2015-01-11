@@ -4,6 +4,7 @@
 //-----------------------------------------------------------------------------
 
 #include <string>
+#include <mutex>
 #include <inttypes.h>
 
 //-----------------------------------------------------------------------------
@@ -52,6 +53,9 @@ private:
 
 private:
     int m_file;     ///< File for communication with I2C device
+
+	/// Mutex to control access to the ADC
+	mutable std::mutex m_mutex;
 };
 
 //-----------------------------------------------------------------------------

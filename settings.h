@@ -9,6 +9,7 @@
 
 // GPIO pin used for the Pump
 #define PUMP_PIN 15
+#define PUMP_PWM_PIN 14
 
 // GPIO pin used by flow sensor
 #define FLOWPIN 27

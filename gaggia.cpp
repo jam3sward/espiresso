@@ -161,9 +161,19 @@ void Hardware::buttonHandler(
     // reset the timer whenever the user interacts with the machine
     lastUsed().reset();
 
-    cout << "button(" << button << ',' << (state?1:0) << ")\n";
-
     switch ( button ) {
+    case BREW_SWITCH:
+        // brew switch pushed
+        // When the front panel brew switch is pushed to enable the pump, this
+        // will be triggered. Since we detect this from the 5V supply in the
+        // pump modulation controller, there will be a delay in detecting when
+        // the pump is switched off (because the reservoir capacitor in the 5V
+        // supply takes time to discharge)
+        cout << "gaggia: brew switch "
+             << (state ? "enabled" : "disabled")
+             << endl;
+        break;
+
     case BUTTON1:
         if ( state ) {
             // button 1 pushed
@@ -396,11 +406,14 @@ int Hardware::runController(
 		// number of millilitres of water drawn up by the pump
 		double ml = 1000.0 * flow().getLitres();
 
+        // pressure in Bar
+        double bar = pressure().getBar();
+
 		// dump values to log file
 		sprintf(
 			buffer,
-			"%.3lf,%.2lf,%.2lf,%.1lf",
-			elapsed, powerLevel, latestTemp, ml
+			"%.3lf,%.2lf,%.2lf,%.1lf,%.2lf",
+			elapsed, powerLevel, latestTemp, ml, bar
 		);
 		out << buffer << endl;
 

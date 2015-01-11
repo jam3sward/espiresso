@@ -101,8 +101,8 @@
                   pin@p1  { function = "i2c0";   termination = "pull_up"; }; // I2C 0 SCL
                   pin@p5  { function = "output"; termination = "pull_down"; }; // CAM_LED
                   pin@p6  { function = "output"; termination = "pull_down"; }; // LAN NRESET
-                  pin@p14 { function = "uart0";  termination = "no_pulling"; drive_strength_mA = < 8 >; }; // TX uart0
-                  pin@p15 { function = "uart0";  termination = "pull_up"; drive_strength_mA = < 8 >; }; // RX uart0
+                  pin@p14 { function = "input";  termination = "pull_down"; }; // PUMP PWM
+                  pin@p15 { function = "input";  termination = "pull_down"; }; // PUMP ENABLE
                   pin@p16 { function = "output"; termination = "pull_up"; polarity = "active_low"; }; // activity LED
                   pin@p21 { function = "output"; termination = "no_pulling";    }; // Camera shutdown
                   pin@p40 { function = "pwm";    termination = "no_pulling"; drive_strength_mA = < 16 >; }; // Left audio

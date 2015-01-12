@@ -513,13 +513,25 @@ int Hardware::runTests()
 			// get key
 			char key = getchar();
 
+            if ( ( key >= '0' ) && ( key <= '9' ) ) {
+                int value = key - '0';
+                if ( value > 0 ) {
+                    double duty = static_cast<double>(value) / 10.0;
+                    pump().setPWMDuty( duty );
+                    pump().setState( true );
+                    cout << "pump duty = " << duty << endl;
+                } else
+                    pump().setState( false );
+                continue;
+            }
+
 			bool stop = false;
 			switch ( tolower(key) ) {
 			case 'p':
                 if ( !pump().getState() ) {
                     flow().notifyAfter( 60.0 / 1000.0 );
                 }
-                pump().setPWMDuty( 0.5 );
+                pump().setPWMDuty( 1.0 );
 				pump().setState( !pump().getState() );
 				cout << "pump: " << (pump().getState() ? "on" : "off") << endl;
 				break;

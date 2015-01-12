@@ -5,6 +5,7 @@
 
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include "gpiopin.h"
 
 //-----------------------------------------------------------------------------
@@ -67,8 +68,9 @@ private:
 
 private:
 	GPIOPin  m_flowPin;	///< Pin used to read the flow sensor
-	unsigned m_count;	///< Current counter value
 	bool	 m_run;		///< Should thread continue to run?
+
+    std::atomic_ulong m_count;  ///< Current counter value
 
 	NotifyFunc m_notifyFunc;	///< Notification function
 	unsigned m_notifyCount;		///< Count at which notification occurs (or 0)

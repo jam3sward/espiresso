@@ -63,8 +63,6 @@ void Flow::worker()
 	while (m_run) {
 		bool wasFlowing = flowing;
 
-        // we don't bother locking this, because we only care
-        // if the value has changed
         unsigned oldCount = m_count;
         delayms( timeout );
         if ( m_count != oldCount ) {
@@ -87,9 +85,6 @@ void Flow::worker()
 			bool notify = false;
 
 			{
-				// lock the mutex
-				std::lock_guard<std::mutex> lock( m_mutex );
-
 				// should we send a notification?
 				notify = (m_notifyCount > 0) && (m_count >= m_notifyCount);
 
@@ -141,9 +136,6 @@ void Flow::worker()
 //-----------------------------------------------------------------------------
 
 void Flow::counter( unsigned pin, bool level, unsigned tick ) {
-	// lock the mutex
-	std::lock_guard<std::mutex> lock( m_mutex );
-
     // increment counter
     ++m_count;
 }//counter
@@ -153,7 +145,6 @@ void Flow::counter( unsigned pin, bool level, unsigned tick ) {
 Flow & Flow::resetCount()
 {
 	// reset the counter
-	std::lock_guard<std::mutex> lock( m_mutex );
 	m_count = 0;
 	return *this;
 }
@@ -163,7 +154,6 @@ Flow & Flow::resetCount()
 unsigned Flow::getCount() const
 {
 	// return the counter value
-	std::lock_guard<std::mutex> lock( m_mutex );
 	return m_count;
 }
 

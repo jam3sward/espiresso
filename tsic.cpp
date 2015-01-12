@@ -44,7 +44,7 @@ static const int SCALE_FACTOR = 1000;
 /// minimum temperature for sensor (must match device data)
 static const int MIN_TEMP = -50;
 
-/// maximum temperature for snesor (must match device data)
+/// maximum temperature for sensor (must match device data)
 static const int MAX_TEMP = 150;
 
 /// special value used to denote invalid sensor data

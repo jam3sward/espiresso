@@ -418,7 +418,7 @@ int Hardware::runController(
 		out << buffer << endl;
 
 		if (interactive) {
-			printf( "%.2lf %.2lf %.1lf\n", elapsed, latestTemp, ml );
+			printf( "%.2lf %.2lf %.1lf %.2lf\n", elapsed, latestTemp, ml, bar );
 		}
 
 		// update temperature display

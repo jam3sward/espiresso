@@ -3,6 +3,7 @@
 #include <iostream>
 #include "flow.h"
 #include "settings.h"
+#include "timing.h"
 
 // Using the Digmesa FHKSC 932-9521-B flow sensor with 1.2mm diameter bore
 // With flow sensor in situ, pumping fresh water, measured:
@@ -49,7 +50,7 @@ void Flow::worker()
         .edgeFuncRegister( std::bind( &Flow::counter, this, _1, _2, _3 ) );
 
 	// timeout period for detecting pulses
-	const unsigned timeout = 10;
+	const unsigned timeout = 250;
 	const unsigned idleTimeout = 1000;
 
 	// is liquid flowing?
@@ -65,7 +66,7 @@ void Flow::worker()
         // we don't bother locking this, because we only care
         // if the value has changed
         unsigned oldCount = m_count;
-        usleep( timeout );
+        delayms( timeout );
         if ( m_count != oldCount ) {
 			// received one (or more) interrupts
 

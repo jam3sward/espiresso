@@ -21,8 +21,18 @@ public:
 		Both    = EITHER_EDGE
 	};
 
+    /// Supported pull up/down modes
+    enum Pull {
+        Float   = PI_PUD_OFF,
+        Down    = PI_PUD_DOWN,
+        Up      = PI_PUD_UP
+    };
+
 	/// Set the pin to be an output (true) or input (false)
 	GPIOPin & setOutput( bool output );
+
+    /// Set the pull up/down state
+    GPIOPin & setPull( Pull pull );
 
 	/// Set the pin state
 	GPIOPin & setState( bool state );

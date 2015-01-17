@@ -49,6 +49,17 @@ GPIOPin & GPIOPin::setOutput( bool output )
 
 //-----------------------------------------------------------------------------
 
+GPIOPin & GPIOPin::setPull( Pull pull )
+{
+    if ( m_open && !m_output ) {
+        // set pin pull/up down state
+        set_pull_up_down( m_pin, pull );
+    }
+    return *this;
+}
+
+//-----------------------------------------------------------------------------
+
 GPIOPin & GPIOPin::setState( bool state )
 {
     if ( m_open ) {

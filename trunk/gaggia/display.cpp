@@ -14,6 +14,7 @@ Display::Display() :
 	m_run( true ),
 	m_dirty( false ),
 	m_degrees( 0.0 ),
+    m_pressure( 0.0 ),
 	m_level( 0.0 ),
 	m_width( 320 ),
 	m_height( 240 )
@@ -43,6 +44,22 @@ Display & Display::updateTemperature( double degrees )
 	m_degrees = degrees;
 
 	return *this;
+}
+
+//-----------------------------------------------------------------------------
+
+Display & Display::updatePressure( double pressure )
+{
+	std::lock_guard<std::mutex> lock( m_mutex );
+
+    if ( pressure < 0.0 ) pressure = 0.0;
+
+    if ( fabs(pressure - m_pressure) >= 0.1 )
+        m_dirty = true;
+
+    m_pressure = pressure;
+
+    return *this;
 }
 
 //-----------------------------------------------------------------------------
@@ -145,20 +162,23 @@ void Display::worker()
 
 void Display::render()
 {
-	double degrees = 0.0;
-	double level   = 0.0;
+	double degrees  = 0.0;
+    double pressure = 0.0;
+	double level    = 0.0;
 
 	// size of screen border
 	const int border = 10;
 
 	{
 		std::lock_guard<std::mutex> lock( m_mutex );
-		degrees = m_degrees;
-		level   = m_level;
+		degrees  = m_degrees;
+        pressure = m_pressure;
+		level    = m_level;
 	}
 
 	static const SDL_Color
 		black  = {   0,   0, 0, 255 },
+        green  = {   0, 255, 0, 255 },
 		yellow = { 255, 255, 0, 255 };
 
 	// format temperature value: 92.9
@@ -167,6 +187,14 @@ void Display::render()
 
 	// display temperature value
 	drawText( m_font, border, border, text.str(), yellow, black );
+
+    // format pressure value: 6.9
+    text.str(string());
+    text.clear();
+    text << std::fixed << std::setprecision(1) << pressure << ' ';
+
+    // display pressure value
+    drawText( m_font, border, border + 80, text.str(), green, black );
 
 	// RGB colours
 	Uint32 rgbCyan = SDL_MapRGB( m_display->format, 0, 255, 255 );

@@ -24,6 +24,7 @@ double Pressure::getBar() const
     // minimum, maximum voltage and voltage range of pressure sensor
     static const double minVoltage = 0.5;
     static const double maxVoltage = 4.5;
+    static const double voltageRange = (maxVoltage - minVoltage);
 
     // supply voltage
     static const double supplyVoltage = 3.3;
@@ -32,7 +33,10 @@ double Pressure::getBar() const
     double voltage = m_adc.getVoltage( m_channel );
 
     // approximate conversion to Bar
-    return maxPressure * (voltage - minVoltage) / (maxVoltage - minVoltage);
+    double bar = maxPressure * (voltage - minVoltage) / voltageRange;
+
+    // clamp to zero
+    return ( bar > 0.0 ) ? bar : 0.0;
 }
 
 //-----------------------------------------------------------------------------

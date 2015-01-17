@@ -424,6 +424,9 @@ int Hardware::runController(
 		// update temperature display
 		display().updateTemperature( latestTemp );
 
+        // update pressure display
+        display().updatePressure( bar );
+
         // range measurement (convert to mm)
         double range = 1000.0 * ranger().getRange();
 

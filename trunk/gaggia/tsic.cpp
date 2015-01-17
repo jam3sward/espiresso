@@ -116,6 +116,7 @@ TSIC::TSIC() :
     m_callback(-1),
     m_count(0),
     m_lastLow(0),
+    m_lastHigh(0),
     m_word(0)
 {
 }
@@ -141,6 +142,9 @@ bool TSIC::open( unsigned gpio )
     // set the GPIO pin to be an input
     if ( set_mode( gpio, PI_INPUT ) != 0 )
         return false;
+
+    // set the GPIO pin pull up
+    set_pull_up_down( gpio, PI_PUD_UP );
 
     // local static function used to forward GPIO alerts to an
     // associated instance of the TSIC class
@@ -205,6 +209,10 @@ void TSIC::close()
     m_open = false;
     m_valid = false;
     m_temperature = 0.0;
+    m_count = 0;
+    m_word = 0;
+    m_lastLow = 0;
+    m_lastHigh = 0;
 }//close
 
 //-----------------------------------------------------------------------------
@@ -232,9 +240,14 @@ void TSIC::alertFunction(
         if ( elapsed < TSIC_FRAME_US/2 ) {
             // high bit
             m_word = (m_word << 1) | 1;
-        } else {
+        } else if ( elapsed < TSIC_FRAME_US ) {
             // low bit
             m_word <<= 1;
+        } else {
+            // low for more than one frame, which should never happen and
+            // must therefore be an invalid bit: start again
+            m_count = 0;
+            m_word  = 0;
         }
 
         if ( ++m_count == TSIC_BITS ) {
@@ -263,9 +276,22 @@ void TSIC::alertFunction(
             m_count = 0;
             m_word = 0;
         }
+
+        // bus went high
+        m_lastHigh = tick;
     } else {
         // bus went low
         m_lastLow = tick;
+
+        // calculate time spent high
+        uint32_t elapsed = tick - m_lastLow;
+
+        // if the bus has been high for more than one frame, reset the
+        // counters to start a new packet
+        if ( elapsed > TSIC_FRAME_US ) {
+            m_count = 0;
+            m_word  = 0;
+        }
     }
 }//alertFunction
 

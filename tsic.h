@@ -44,6 +44,7 @@ public:
     /// success, or false in case of failure
     bool getDegrees( double & value ) const;
 
+private:
     /// Alert function called when the GPIO pin changes state
     void alertFunction( int gpio, int level, uint32_t tick );
 
@@ -56,6 +57,7 @@ private:
     int      m_callback;    ///< callback identifier
     uint32_t m_count;       ///< number of bits received in current packet
     uint32_t m_lastLow;     ///< time when GPIO pin last went low (us)
+    uint32_t m_lastHigh;    ///< time when GPIO pin last went high (us)
     int      m_word;        ///< used to consolidate incoming packet bits
 
     /// Mutex to control access to the sensor data

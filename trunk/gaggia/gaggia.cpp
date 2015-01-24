@@ -53,6 +53,7 @@ private:
     Ranger      m_ranger;       ///< Range finder to measure water level
     Display     m_display;      ///< LCD display screen
     System      m_system;       ///< System information
+    bool        m_pumpSense;    ///< Is the pump active?
 
     std::shared_ptr<Regulator> m_regulator;
 
@@ -83,8 +84,15 @@ public:
 
     Pressure & pressure() { return *m_pressure; }
 
+    /// Returns true if the pump is active (whether enabled in software, or by
+    /// using the manual front panel switch)
+    bool pumpSense() const { return m_pumpSense; }
+
     /// Constructor
     Hardware() {
+        // used to sense when pump is running
+        m_pumpSense = false;
+
         // initialise ADC
         if ( !m_adc.open( I2C_DEVICE_PATH, ADS1015_ADC_I2C_ADDRESS ) )
             cerr << "gaggia: failed to open ADC\n";
@@ -172,6 +180,9 @@ void Hardware::buttonHandler(
         cout << "gaggia: brew switch "
              << (state ? "enabled" : "disabled")
              << endl;
+
+        // set or clear the flag (stores current state)
+        m_pumpSense = state;
         break;
 
     case BUTTON1:
@@ -441,6 +452,9 @@ int Hardware::runController(
 
         // update boiler power indicator
         display().setPowerOn( regulator().getPower() );
+
+        // update pump status indicator
+        display().setPumpOn( pumpSense() );
 
         // if auto cut out is enabled (greater than one second) and if too
         // much time has elapsed since the last user interaction, and the

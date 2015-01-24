@@ -26,6 +26,8 @@ public:
 
     Display & setPowerOn( bool powerOn );
 
+    Display & setPumpOn( bool pumpOn );
+
 private:
 	bool open();
 
@@ -49,11 +51,10 @@ private:
 	SDL_Surface *m_display;	    ///< Display surface
 	TTF_Font	*m_font;
     SDL_Surface *m_powerIcon;   ///< Power icon image
+    SDL_Surface *m_pumpIcon;    ///< Pump icon image
 
 	int			m_width;	///< Width of display in pixels
 	int			m_height;	///< Height of display in pixels
-
-
 
 	bool		m_run;		///< Should thread continue to run?
 	bool		m_dirty;	///< Does the display need updating?
@@ -62,6 +63,7 @@ private:
     double      m_pressure; ///< Pressure display
 	double		m_level;	///< Water level display
     bool        m_powerOn;  ///< Power on display
+    bool        m_pumpOn;   ///< Pump on display
 
     /// Rendering thread
     std::thread m_thread;

@@ -40,6 +40,9 @@
 #define BUTTON2 2
 #define BREW_SWITCH 1
 
+// Icon file paths
+#define ICON_BOILER_POWER "/etc/gaggia/boiler_32x32.png"
+
 //-----------------------------------------------------------------------------
 
 #endif//__settings_h

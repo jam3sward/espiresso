@@ -3,6 +3,7 @@
 #include <math.h>
 #include "display.h"
 #include "timing.h"
+#include "settings.h"
 
 using namespace std;
 
@@ -140,7 +141,7 @@ bool Display::open()
 	if ( m_font == 0 ) return false;
 
     // load the power icon
-    SDL_Surface *temp = IMG_Load("/etc/gaggia/power_32x32.png");
+    SDL_Surface *temp = IMG_Load( ICON_BOILER_POWER );
     if ( temp == 0 ) return false;
     m_powerIcon = SDL_DisplayFormat( temp );
     SDL_FreeSurface( temp );

@@ -54,6 +54,7 @@ private:
     Display     m_display;      ///< LCD display screen
     System      m_system;       ///< System information
     bool        m_pumpSense;    ///< Is the pump active?
+    unsigned    m_pourCount;    ///< Pour count
 
     std::shared_ptr<Regulator> m_regulator;
 
@@ -88,10 +89,16 @@ public:
     /// using the manual front panel switch)
     bool pumpSense() const { return m_pumpSense; }
 
+    /// Returns the pour counter value
+    unsigned pourCount() const { return m_pourCount; }
+
     /// Constructor
     Hardware() {
         // used to sense when pump is running
         m_pumpSense = false;
+
+        // used to count how many times the pump has run
+        m_pourCount = 0;
 
         // initialise ADC
         if ( !m_adc.open( I2C_DEVICE_PATH, ADS1015_ADC_I2C_ADDRESS ) )
@@ -183,6 +190,10 @@ void Hardware::buttonHandler(
 
         // set or clear the flag (stores current state)
         m_pumpSense = state;
+
+        // if the power has been enabled, increment the pour counter
+        if ( state ) ++m_pourCount;
+
         break;
 
     case BUTTON1:
@@ -420,16 +431,22 @@ int Hardware::runController(
         // pressure in Bar
         double bar = pressure().getBar();
 
+        // pump status
+        int pump = pumpSense() ? 1 : 0;
+
+        // pour number (zero if the pump isn't running)
+        int pour = (pump > 0) ? pourCount() : 0;
+
 		// dump values to log file
 		sprintf(
 			buffer,
-			"%.3lf,%.2lf,%.2lf,%.1lf,%.2lf",
-			elapsed, powerLevel, latestTemp, ml, bar
+			"%.3lf,%.2lf,%.2lf,%.1lf,%.2lf,%d,%d",
+			elapsed, powerLevel, latestTemp, ml, bar, pump, pour
 		);
 		out << buffer << endl;
 
 		if (interactive) {
-			printf( "%.2lf %.2lf %.1lf %.2lf\n", elapsed, latestTemp, ml, bar );
+			printf( "%.2lf %.2lf %.1lf %.2lf %d\n", elapsed, latestTemp, ml, bar, pour );
 		}
 
 		// update temperature display

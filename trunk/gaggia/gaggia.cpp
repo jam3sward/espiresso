@@ -439,6 +439,9 @@ int Hardware::runController(
 		// update water level display
 		display().updateLevel( level );
 
+        // update boiler power indicator
+        display().setPowerOn( regulator().getPower() );
+
         // if auto cut out is enabled (greater than one second) and if too
         // much time has elapsed since the last user interaction, and the
         // timer is running, turn off the boiler as a precaution

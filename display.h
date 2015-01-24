@@ -7,6 +7,7 @@
 #include <thread>
 #include <mutex>
 #include <SDL/SDL.h>
+#include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
 
 //-----------------------------------------------------------------------------
@@ -22,6 +23,8 @@ public:
     Display & updatePressure( double pressure );
 
 	Display & updateLevel( double level );
+
+    Display & setPowerOn( bool powerOn );
 
 private:
 	bool open();
@@ -43,8 +46,9 @@ private:
 	);
 
 private:
-	SDL_Surface *m_display;	///< Display surface
+	SDL_Surface *m_display;	    ///< Display surface
 	TTF_Font	*m_font;
+    SDL_Surface *m_powerIcon;   ///< Power icon image
 
 	int			m_width;	///< Width of display in pixels
 	int			m_height;	///< Height of display in pixels
@@ -57,6 +61,7 @@ private:
 	double 		m_degrees;	///< Temperature in degrees
     double      m_pressure; ///< Pressure display
 	double		m_level;	///< Water level display
+    bool        m_powerOn;  ///< Power on display
 
     /// Rendering thread
     std::thread m_thread;

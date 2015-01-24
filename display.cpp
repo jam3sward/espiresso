@@ -16,6 +16,7 @@ Display::Display() :
 	m_degrees( 0.0 ),
     m_pressure( 0.0 ),
 	m_level( 0.0 ),
+    m_powerOn( false ),
 	m_width( 320 ),
 	m_height( 240 )
 {
@@ -76,6 +77,20 @@ Display & Display::updateLevel( double level )
 
 //-----------------------------------------------------------------------------
 
+Display & Display::setPowerOn( bool powerOn )
+{
+    std::lock_guard<std::mutex> lock( m_mutex );
+
+    if ( m_powerOn != powerOn ) {
+        m_powerOn = powerOn;
+        m_dirty = true;
+    }
+
+    return *this;
+}
+
+//-----------------------------------------------------------------------------
+
 bool Display::open()
 {
 	// todo: clean this up
@@ -124,6 +139,13 @@ bool Display::open()
 	);
 	if ( m_font == 0 ) return false;
 
+    // load the power icon
+    SDL_Surface *temp = IMG_Load("/etc/gaggia/power_32x32.png");
+    if ( temp == 0 ) return false;
+    m_powerIcon = SDL_DisplayFormat( temp );
+    SDL_FreeSurface( temp );
+    if ( m_powerIcon == 0 ) return false;
+
 	// hide mouse pointer
 	SDL_ShowCursor( 0 );
 
@@ -135,6 +157,12 @@ bool Display::open()
 
 void Display::close()
 {
+    // free power icon
+    if ( m_powerIcon != 0 ) {
+        SDL_FreeSurface( m_powerIcon );
+        m_powerIcon = 0;
+    }
+
 	// close font
 	if ( m_font != 0 ) TTF_CloseFont( m_font );
 
@@ -162,6 +190,9 @@ void Display::worker()
 
 void Display::render()
 {
+    // clear the screen first
+    SDL_FillRect( m_display, 0, 0 );
+
 	double degrees  = 0.0;
     double pressure = 0.0;
 	double level    = 0.0;
@@ -191,7 +222,7 @@ void Display::render()
     // format pressure value: 6.9
     text.str(string());
     text.clear();
-    text << std::fixed << std::setprecision(1) << pressure << ' ';
+    text << std::fixed << std::setprecision(1) << pressure;
 
     // display pressure value
     drawText( m_font, border, border + 80, text.str(), green, black );
@@ -216,6 +247,16 @@ void Display::render()
 	rect.w = maxWidth - width;
 	SDL_FillRect( m_display, &rect, rgbBlue );
 
+    // draw power icon
+    if ( m_powerOn && (m_powerIcon != 0) ) {
+        SDL_Rect destRect = {
+            static_cast<short>(m_width - 32 - border), border,
+            0, 0
+        };
+        SDL_BlitSurface( m_powerIcon, 0, m_display, &destRect );
+    }
+
+    // flip the display buffers
 	SDL_Flip( m_display );
 }
 

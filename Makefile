@@ -6,7 +6,9 @@ gaggia: gaggia.cpp settings.h \
 	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o \
 	gpiopin.o ranger.o flow.o system.o pump.o display.o regulator.o adc.o tsic.o \
 	pigpiomgr.o hcsr04.o pressure.o \
-	-lrt -lpthread -std=c++0x -lSDL -lSDLmain -lSDL_ttf -lpigpiod_if
+	-lrt -lpthread -std=c++0x -lSDL \
+	-lSDLmain -lSDL_ttf -lSDL_image \
+	-lpigpiod_if
 
 pwm.o: pwm.h pwm.cpp settings.h
 	g++ -c pwm.cpp

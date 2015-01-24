@@ -18,6 +18,9 @@ Display::Display() :
     m_pressure( 0.0 ),
 	m_level( 0.0 ),
     m_powerOn( false ),
+    m_powerIcon( 0 ),
+    m_pumpOn( false ),
+    m_pumpIcon( 0 ),
 	m_width( 320 ),
 	m_height( 240 )
 {
@@ -92,6 +95,20 @@ Display & Display::setPowerOn( bool powerOn )
 
 //-----------------------------------------------------------------------------
 
+Display & Display::setPumpOn( bool pumpOn )
+{
+    std::lock_guard<std::mutex> lock( m_mutex );
+
+    if ( m_pumpOn != pumpOn ) {
+        m_pumpOn = pumpOn;
+        m_dirty = true;
+    }
+
+    return *this;
+}
+
+//-----------------------------------------------------------------------------
+
 bool Display::open()
 {
 	// todo: clean this up
@@ -147,6 +164,13 @@ bool Display::open()
     SDL_FreeSurface( temp );
     if ( m_powerIcon == 0 ) return false;
 
+    // load the pump icon
+    temp = IMG_Load( ICON_PUMP_ACTIVE );
+    if ( temp == 0 ) return false;
+    m_pumpIcon = SDL_DisplayFormat( temp );
+    SDL_FreeSurface( temp );
+    if ( m_pumpIcon == 0 ) return false;
+
 	// hide mouse pointer
 	SDL_ShowCursor( 0 );
 
@@ -162,6 +186,12 @@ void Display::close()
     if ( m_powerIcon != 0 ) {
         SDL_FreeSurface( m_powerIcon );
         m_powerIcon = 0;
+    }
+
+    // free pump icon
+    if ( m_pumpIcon != 0 ) {
+        SDL_FreeSurface( m_pumpIcon );
+        m_pumpIcon = 0;
     }
 
 	// close font
@@ -255,6 +285,15 @@ void Display::render()
             0, 0
         };
         SDL_BlitSurface( m_powerIcon, 0, m_display, &destRect );
+    }
+
+    // draw pump icon
+    if ( m_pumpOn && (m_pumpIcon != 0) ) {
+        SDL_Rect destRect = {
+            static_cast<short>(m_width - 32 - border), border + 32,
+            0, 0
+        };
+        SDL_BlitSurface( m_pumpIcon, 0, m_display, &destRect );
     }
 
     // flip the display buffers

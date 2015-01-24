@@ -42,6 +42,7 @@
 
 // Icon file paths
 #define ICON_BOILER_POWER "/etc/gaggia/boiler_32x32.png"
+#define ICON_PUMP_ACTIVE  "/etc/gaggia/pump_32x32.png"
 
 //-----------------------------------------------------------------------------
 

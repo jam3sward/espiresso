@@ -30,7 +30,11 @@ double Pressure::getBar() const
     static const double supplyVoltage = 3.3;
 
     // measure the ADC voltage
-    double voltage = m_adc.getVoltage( m_channel );
+    double voltage = 0.0;
+    const int samples = 3;
+    for (int i=0; i<samples; ++i)
+        voltage += m_adc.getVoltage( m_channel );
+    voltage /= static_cast<double>(samples);
 
     // approximate conversion to Bar
     double bar = maxPressure * (voltage - minVoltage) / voltageRange;

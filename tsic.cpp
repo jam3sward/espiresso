@@ -233,21 +233,25 @@ void TSIC::alertFunction(
 ) {
     if ( level == 1 ) {
         // bus went high
-        uint32_t elapsed = tick - m_lastLow;
+        m_lastHigh = tick;
+        uint32_t timeLow = tick - m_lastLow;
 
         // assuming 125us frame, 25% duty (low) and 75% duty (high)
         // we treat anything more than 50% duty as a high bit
-        if ( elapsed < TSIC_FRAME_US/2 ) {
+        if ( timeLow < TSIC_FRAME_US/2 ) {
             // high bit
             m_word = (m_word << 1) | 1;
-        } else if ( elapsed < TSIC_FRAME_US ) {
+        } else if ( timeLow < TSIC_FRAME_US ) {
             // low bit
             m_word <<= 1;
-        } else {
+        } else if ( timeLow > TSIC_FRAME_US*2 ) {
             // low for more than one frame, which should never happen and
             // must therefore be an invalid bit: start again
             m_count = 0;
             m_word  = 0;
+
+            // ignore the invalid bit
+            return;
         }
 
         if ( ++m_count == TSIC_BITS ) {
@@ -276,19 +280,16 @@ void TSIC::alertFunction(
             m_count = 0;
             m_word = 0;
         }
-
-        // bus went high
-        m_lastHigh = tick;
     } else {
         // bus went low
         m_lastLow = tick;
 
         // calculate time spent high
-        uint32_t elapsed = tick - m_lastLow;
+        uint32_t timeHigh = tick - m_lastHigh;
 
         // if the bus has been high for more than one frame, reset the
         // counters to start a new packet
-        if ( elapsed > TSIC_FRAME_US ) {
+        if ( timeHigh > TSIC_FRAME_US*2 ) {
             m_count = 0;
             m_word  = 0;
         }

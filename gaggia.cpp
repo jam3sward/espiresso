@@ -55,6 +55,7 @@ private:
     System      m_system;       ///< System information
     bool        m_pumpSense;    ///< Is the pump active?
     unsigned    m_pourCount;    ///< Pour count
+    Timer       m_pourTime;     ///< Pour timer
 
     std::shared_ptr<Regulator> m_regulator;
 
@@ -92,8 +93,14 @@ public:
     /// Returns the pour counter value
     unsigned pourCount() const { return m_pourCount; }
 
+    /// Returns the pour time in seconds
+    double pourTime() const;
+
     /// Constructor
     Hardware() {
+        // reset and stop the timer
+        m_pourTime.reset().stop();
+
         // used to sense when pump is running
         m_pumpSense = false;
 
@@ -167,6 +174,13 @@ void signalHandler( int signal )
 
 //-----------------------------------------------------------------------------
 
+double Hardware::pourTime() const
+{
+    return m_pourTime.getElapsed();
+}
+
+//-----------------------------------------------------------------------------
+
 /// Called when buttons are pressed or released
 void Hardware::buttonHandler(
     int button,     // button number (1,2)
@@ -190,6 +204,12 @@ void Hardware::buttonHandler(
 
         // set or clear the flag (stores current state)
         m_pumpSense = state;
+
+        // start or stop the pour timer
+        if ( state )
+            m_pourTime.start();
+        else
+            m_pourTime.stop();
 
         // if the power has been enabled, increment the pour counter
         if ( state ) ++m_pourCount;
@@ -472,6 +492,9 @@ int Hardware::runController(
 
         // update pump status indicator
         display().setPumpOn( pumpSense() );
+
+        // update time display
+        display().updateTime( pourTime() );
 
         // if auto cut out is enabled (greater than one second) and if too
         // much time has elapsed since the last user interaction, and the

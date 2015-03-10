@@ -24,6 +24,8 @@ public:
 
 	Display & updateLevel( double level );
 
+    Display & updateTime( double time );
+
     Display & setPowerOn( bool powerOn );
 
     Display & setPumpOn( bool pumpOn );
@@ -62,6 +64,7 @@ private:
 	double 		m_degrees;	///< Temperature in degrees
     double      m_pressure; ///< Pressure display
 	double		m_level;	///< Water level display
+    double      m_time;     ///< Shot time display
     bool        m_powerOn;  ///< Power on display
     bool        m_pumpOn;   ///< Pump on display
 

@@ -81,6 +81,20 @@ Display & Display::updateLevel( double level )
 
 //-----------------------------------------------------------------------------
 
+Display & Display::updateTime( double time )
+{
+    std::lock_guard<std::mutex> lock( m_mutex );
+
+    if ( time < 0.0 ) time = 0.0;
+
+    m_time = time;
+    m_dirty = true;
+
+    return *this;
+}
+
+//-----------------------------------------------------------------------------
+
 Display & Display::setPowerOn( bool powerOn )
 {
     std::lock_guard<std::mutex> lock( m_mutex );
@@ -227,6 +241,7 @@ void Display::render()
 	double degrees  = 0.0;
     double pressure = 0.0;
 	double level    = 0.0;
+    double time     = 0.0;
 
 	// size of screen border
 	const int border = 10;
@@ -236,12 +251,14 @@ void Display::render()
 		degrees  = m_degrees;
         pressure = m_pressure;
 		level    = m_level;
+        time     = m_time;
 	}
 
 	static const SDL_Color
-		black  = {   0,   0, 0, 255 },
-        green  = {   0, 255, 0, 255 },
-		yellow = { 255, 255, 0, 255 };
+		black  = {   0,   0,   0, 255 },
+        green  = {   0, 255,   0, 255 },
+		yellow = { 255, 255,   0, 255 },
+        cyan   = {   0, 255, 255, 255 };
 
 	// format temperature value: 92.9
 	stringstream text;
@@ -257,6 +274,14 @@ void Display::render()
 
     // display pressure value
     drawText( m_font, border, border + 80, text.str(), green, black );
+
+    // format time value: 12.3
+    text.str(string());
+    text.clear();
+    text << std::fixed << std::setprecision(1) << time;
+
+    // display time
+    drawText( m_font, border + 110, border + 80, text.str(), cyan, black );
 
 	// RGB colours
 	Uint32 rgbCyan = SDL_MapRGB( m_display->format, 0, 255, 255 );

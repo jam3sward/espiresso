@@ -402,6 +402,15 @@ int Hardware::runController(
 	double timeStep = config["timeStep"];
 	regulator().setTimeStep( timeStep );
 
+    // pressure sensor calibration
+    {
+        // these are the multiplier and offset used to calibrate the analogue pressure
+        // transducer measurement to match the front panel mechanical pressure gauge
+        const double scale = config["pressureScale"];
+        const double offset = config["pressureOffset"];
+        pressure().setCorrection( scale, offset );
+    }
+
 	// output parameters to log
 	char buffer[512];
 	sprintf(

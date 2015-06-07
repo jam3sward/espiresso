@@ -4,7 +4,9 @@
 
 Pressure::Pressure( ADC & adc, unsigned channel ) :
     m_adc( adc ),
-    m_channel( channel )
+    m_channel( channel ),
+    m_scale( 1.0 ),
+    m_offset( 0.0 )
 {
 }
 
@@ -39,8 +41,19 @@ double Pressure::getBar() const
     // approximate conversion to Bar
     double bar = maxPressure * (voltage - minVoltage) / voltageRange;
 
+    // apply user defined scale and offset
+    bar = bar * m_scale + m_offset;
+
     // clamp to zero
     return ( bar > 0.0 ) ? bar : 0.0;
+}
+
+//-----------------------------------------------------------------------------
+
+void Pressure::setCorrection( double scale, double offset )
+{
+    m_scale = scale;
+    m_offset = offset;
 }
 
 //-----------------------------------------------------------------------------

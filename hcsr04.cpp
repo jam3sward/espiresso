@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "hcsr04.h"
 #include "pigpiomgr.h"
 

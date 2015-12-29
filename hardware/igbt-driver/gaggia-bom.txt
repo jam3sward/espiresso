@@ -1,0 +1,18 @@
+Part Value           Device          Package             Description                              MF MPN OC_FARNELL OC_NEWARK
+F1   1A              FUSETE5         TE5                 Fuse                                            unknown    unknown  
+IC1  TC426           TC426           DIL08               1.5A Dual High-Speed Power MOSFET Driver                            
+JP1  POWER           M025MM          SCREWTERMINAL-5MM-2 Standard 2-pin 0.1" header.                             
+JP2  IGBT1           M02PTH          1X02                Standard 2-pin 0.1" header.                               
+JP3  IGBT2           M02PTH          1X02                Standard 2-pin 0.1" header.                               
+JP4  CONTROL         M04PTH          1X04                Standard 4-pin 0.1" header.                                                       
+OC1  HCPL-817        TIL197          DIL04               TEXAS INSTRUMENTS OPTO COUPLER                  1683368    unknown  
+OC2  HCPL-817        TIL197          DIL04               TEXAS INSTRUMENTS OPTO COUPLER                  1683368    unknown  
+OC3  HCPL-817        TIL197          DIL04               TEXAS INSTRUMENTS OPTO COUPLER                  1683368    unknown  
+R1   1K              R-EU_0204/7     0204/7              RESISTOR                                          
+R2   1K              R-EU_0204/7     0204/7              RESISTOR                                         
+R3   4K7             R-EU_0204/7     0204/7              RESISTOR                                           
+R4   4K7             R-EU_0204/7     0204/7              RESISTOR                                           
+R5   360R            R-EU_0204/7     0204/7              RESISTOR                                           
+R6   270R            R-EU_0204/7     0204/7              RESISTOR                                           
+R7   270R            R-EU_0204/7     0204/7              RESISTOR                                           
+RG1  VTX-214-003-105 VTX-214-003-105 VTX-214-003         Vigortronix 90-265V AC to 5V DC 600mA                                                          

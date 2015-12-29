@@ -10,6 +10,9 @@ gaggia: gaggia.cpp settings.h \
 	-lSDLmain -lSDL_ttf -lSDL_image \
 	-lpigpiod_if
 
+install: gaggia
+	cp gaggia /usr/local/bin/gaggia
+
 pwm.o: pwm.h pwm.cpp settings.h
 	g++ -c pwm.cpp
 

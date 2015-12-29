@@ -537,7 +537,7 @@ int Hardware::runController(
 
 	// if the halt button was pushed, halt the system
 	if ( g_halt ) {
-		::system( "halt" );
+		::system( "poweroff" );
 	}
 
   	return 0;

@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <map>
 #include <memory>
 
@@ -535,12 +536,25 @@ int Hardware::runController(
 	// turn the boiler off before we exit
 	regulator().setPower( false );
 
-	// if the halt button was pushed, halt the system
-	if ( g_halt ) {
-		::system( "poweroff" );
-	}
+    // if the halt button was pushed, halt the system
+    if ( g_halt ) {
+        // rather than shutting down immediately, we want to schedule this to
+        // happen a few seconds after our process has exited. here we use
+        // bash to run a background job which will sleep for a few seconds
+        // before powering off the system
 
-  	return 0;
+        // format the command string (including time in seconds)
+        const auto shutdownDelay = static_cast<int>(config["shutdownDelay"]);
+        stringstream command;
+        command << "bash -c \"sleep " << shutdownDelay << "; poweroff \" &";
+
+        // execute the comamnd
+        ::system( command.str().c_str() );
+    }
+
+    // exit normally
+    cerr << "gaggia: exiting controller\n";
+    return 0;
 }
 
 //-----------------------------------------------------------------------------

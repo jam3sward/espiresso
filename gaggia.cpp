@@ -118,15 +118,6 @@ public:
         m_inputs = std::make_shared<Inputs>( m_adc, ADC_BUTTON_CHANNEL );
         m_pressure = std::make_shared<Pressure>( m_adc, ADC_PRESSURE_CHANNEL );
 
-        /// store the primary network IP address
-        m_networkIP = getPrimaryIPString();
-        if ( m_networkIP.empty() ) {
-            cerr << "gaggia: failed to query the IP address\n";
-        }
-
-        // display the IP address
-        display().setMessage( m_networkIP );
-
         using namespace std::placeholders;
 
         // register button handler
@@ -516,6 +507,19 @@ int Hardware::runController(
 
         // update time display
         display().updateTime( pourTime() );
+
+        // update the network status display
+        if ( m_networkIP.empty() ) {
+            // query IP address (may return empty string)
+            m_networkIP = getPrimaryIPString();
+
+            // update the display (string may be empty)
+            if ( !m_networkIP.empty() ) {
+                display().setMessage( m_networkIP );
+            } else {
+                display().setMessage( "no network" );
+            }
+        }
 
         // if auto cut out is enabled (greater than one second) and if too
         // much time has elapsed since the last user interaction, and the

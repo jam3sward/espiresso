@@ -12,6 +12,7 @@ using namespace std;
 Display::Display() :
 	m_display( 0 ),
 	m_font( 0 ),
+    m_smallFont( 0 ),
 	m_run( true ),
 	m_dirty( false ),
 	m_degrees( 0.0 ),
@@ -123,6 +124,14 @@ Display & Display::setPumpOn( bool pumpOn )
 
 //-----------------------------------------------------------------------------
 
+Display & Display::setMessage( const std::string& message )
+{
+    m_message = message;
+    return *this;
+}
+
+//-----------------------------------------------------------------------------
+
 bool Display::open()
 {
 	// todo: clean this up
@@ -171,6 +180,13 @@ bool Display::open()
 	);
 	if ( m_font == 0 ) return false;
 
+    // load the small font
+    m_smallFont = TTF_OpenFont(
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+        16
+    );
+    if ( m_smallFont == 0 ) return false;
+
     // load the power icon
     SDL_Surface *temp = IMG_Load( ICON_BOILER_POWER );
     if ( temp == 0 ) return false;
@@ -209,7 +225,16 @@ void Display::close()
     }
 
 	// close font
-	if ( m_font != 0 ) TTF_CloseFont( m_font );
+	if ( m_font != 0 ) {
+        TTF_CloseFont( m_font );
+        m_font = 0;
+    }
+
+    // close font
+    if ( m_smallFont != 0 ) {
+        TTF_CloseFont( m_smallFont );
+        m_smallFont = 0;
+    }
 
 	// close TTF
 	TTF_Quit();
@@ -282,6 +307,11 @@ void Display::render()
 
     // display time
     drawText( m_font, border + 110, border + 80, text.str(), cyan, black );
+
+    // display message if available
+    if ( !m_message.empty() ) {
+        drawText( m_smallFont, 10, 200, m_message, green, black );
+    }
 
 	// RGB colours
 	Uint32 rgbCyan = SDL_MapRGB( m_display->format, 0, 255, 255 );

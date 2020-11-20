@@ -23,6 +23,7 @@
 #include "pressure.h"
 #include "settings.h"
 #include "pigpiomgr.h"
+#include "network.h"
 
 using namespace std;
 
@@ -57,6 +58,7 @@ private:
     bool        m_pumpSense;    ///< Is the pump active?
     unsigned    m_pourCount;    ///< Pour count
     Timer       m_pourTime;     ///< Pour timer
+    std::string m_networkIP;    ///< Primary network IP address
 
     std::shared_ptr<Regulator> m_regulator;
 
@@ -115,6 +117,15 @@ public:
         m_regulator = std::make_shared<Regulator>( m_temperature );
         m_inputs = std::make_shared<Inputs>( m_adc, ADC_BUTTON_CHANNEL );
         m_pressure = std::make_shared<Pressure>( m_adc, ADC_PRESSURE_CHANNEL );
+
+        /// store the primary network IP address
+        m_networkIP = getPrimaryIPString();
+        if ( m_networkIP.empty() ) {
+            cerr << "gaggia: failed to query the IP address\n";
+        }
+
+        // display the IP address
+        display().setMessage( m_networkIP );
 
         using namespace std::placeholders;
 

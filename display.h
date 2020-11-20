@@ -30,6 +30,8 @@ public:
 
     Display & setPumpOn( bool pumpOn );
 
+    Display & setMessage( const std::string& message );
+
 private:
 	bool open();
 
@@ -52,6 +54,7 @@ private:
 private:
 	SDL_Surface *m_display;	    ///< Display surface
 	TTF_Font	*m_font;
+    TTF_Font    *m_smallFont;   ///< Small font
     SDL_Surface *m_powerIcon;   ///< Power icon image
     SDL_Surface *m_pumpIcon;    ///< Pump icon image
 
@@ -67,6 +70,7 @@ private:
     double      m_time;     ///< Shot time display
     bool        m_powerOn;  ///< Power on display
     bool        m_pumpOn;   ///< Pump on display
+    std::string m_message;  ///< Message text
 
     /// Rendering thread
     std::thread m_thread;

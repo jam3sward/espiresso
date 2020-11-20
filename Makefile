@@ -1,11 +1,11 @@
 gaggia: gaggia.cpp settings.h \
 	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o \
 	gpiopin.o ranger.o flow.o system.o pump.o display.o regulator.o adc.o tsic.o \
-	pigpiomgr.o hcsr04.o pressure.o
+	pigpiomgr.o hcsr04.o pressure.o network.o
 	g++ -o gaggia gaggia.cpp \
 	pwm.o inputs.o timing.o pid.o gpio.o temperature.o boiler.o keyboard.o \
 	gpiopin.o ranger.o flow.o system.o pump.o display.o regulator.o adc.o tsic.o \
-	pigpiomgr.o hcsr04.o pressure.o \
+	pigpiomgr.o hcsr04.o pressure.o network.o \
 	-lrt -lpthread -std=c++0x -lSDL \
 	-lSDLmain -lSDL_ttf -lSDL_image \
 	-lpigpiod_if
@@ -72,3 +72,6 @@ pigpiomgr.o: pigpiomgr.h pigpiomgr.cpp
 
 pressure.o: pressure.h pressure.cpp
 	g++ -c pressure.cpp -std=c++0x
+
+network.o: network.h network.cpp
+	g++ -c network.cpp -std=c++0x

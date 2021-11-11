@@ -71,6 +71,7 @@ Timer & Timer::start()
 {
     m_startTime = getClock();
     m_running   = true;
+    return *this;
 }
 
 //-----------------------------------------------------------------------------

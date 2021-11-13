@@ -710,6 +710,14 @@ int main( int argc, char **argv )
 		return 1;
 	}
 
+    // ignore SIGHUP to prevent an exit when running as a systemd service
+    // (this appears to be an issue with SDL_Init as others have reported
+    // the same issue with SDL1 and PyGame)
+    if ( signal(SIGHUP, SIG_IGN) == SIG_ERR ) {
+        cerr << "gaggia: failed to hook SIGHUP\n";
+        return 1;
+    }
+
 	if ( argc < 2 ) {
 		cerr << "gaggia: expected a command\n";
 		return 1;
